@@ -51,56 +51,6 @@ func ReadArtistById(ArtistId int) []byte {
 	return []byte{}
 }
 
-func ReadAlbumById(AlbumId int) []byte {
-	//JSON: Get("https://api.discogs.com/releases/249504")
-	methods := getMethod()
-	url := getURL()
-	fullUrl := url[0] + methods[1] + "/" + strconv.Itoa(AlbumId)
-
-	resp, err := Get(fullUrl)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	log.Println(fullUrl)
-
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		//bodyString := string(bodyBytes)
-		return bodyBytes
-	}
-	log.Println("Error 404")
-	return []byte{}
-}
-
-func ReadAlbumByArtistId(ArtistId, AlbumId int) []byte {
-	//JSON: Get("https://api.discogs.com/releases/249504")
-	methods := getMethod()
-	url := getURL()
-	fullUrl := url[0] + methods[0] + "/" + strconv.Itoa(ArtistId) + "/" + methods[1] + "/" + strconv.Itoa(AlbumId)
-	log.Println("FullUrl : ", fullUrl)
-
-	resp, err := Get(fullUrl)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		// bodyString := string(bodyBytes)
-		return bodyBytes
-	}
-	log.Println("Error 404")
-	return []byte{}
-}
-
 func ReadReleasesByArtistId(ArtistId int) []byte {
 	methods := getMethod()
 	url := getURL()

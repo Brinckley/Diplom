@@ -11,23 +11,6 @@ import (
 	"time"
 )
 
-func ParserCollectorArtist(ArtistName string) []byte {
-	lastfmArtist := parser_lastfm.ReadArtist(ArtistName) // artist of lastfm in struct
-	discogsArtistID := discogs_functions.CreateRequestByName(ArtistName, "artist")
-	discogsArtistData := discogs_functions.ReadArtistById(discogsArtistID)
-	var discogsArtist discogs_structs.DiscogsArtistJson // artist of discogs in struct
-	json.Unmarshal(discogsArtistData, &discogsArtist)
-
-	artist := ArtistDBBuilder(lastfmArtist, discogsArtist, 2) // building db structure object from two elements
-	data, err := json.Marshal(artist)
-	if err != nil {
-		log.Println("Error marshalling artist :", ArtistName)
-	}
-	data = bytes.Trim(data, "\x00")
-
-	return data
-}
-
 // aName      string
 // release    time.Time
 // urlLastfm  string

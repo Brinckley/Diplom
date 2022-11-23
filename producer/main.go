@@ -23,17 +23,6 @@ func produce(ctx context.Context, network, brokerAddress, topic string, partitio
 	conn.WriteMessages(kafka.Message{Value: message})
 }
 
-//func produceFull(ctx context.Context, network, brokerAddress, topicArtist, topicAlbum, topicTrack string, partition int,
-//	artist collector.ArtistDB, album collector.AlbumDB, track collector.TrackDB) {
-//	conn, err := kafka.DialLeader(ctx, network, brokerAddress, topicArtist, partition)
-//	if err != nil {
-//		fmt.Println("DialLeader command escaped....")
-//		log.Fatal(err)
-//	}
-//	conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
-//	conn.WriteMessages(kafka.Message{Value: message})
-//}
-
 var cBrokerAddress = "localhost:9092"
 var cNetwork = "tcp"
 var cArtistTopic = "Artist"
@@ -77,25 +66,4 @@ func main() {
 	}
 	fmt.Println("----Tracks written----")
 	log.Println("---------------------------------------------------------------------------------------------------------------------------")
-	//var art collector.ArtistDB
-	//json.Unmarshal(ArtistJson, &art)
-	//log.Printf("Artist data: %v\n", art)
-	//log.Println("---------------------------------------------------------------------------------------------------------------------------")
-	//log.Println()
-	//for i, data := range AlbumsJson {
-	//	var alb collector.AlbumDB
-	//	json.Unmarshal(data, &alb)
-	//	log.Printf("%v.  %v\n", i, alb)
-	//}
-	//
-	//var tra TrackDB
-	//json.Unmarshal(TrackJson, &tra)
-	//fmt.Println("TRACK \n", tra)
-
-	//produce(context.Background(), cNetwork, cBrokerAddress, cArtistTopic, 0, ArtistJson)
-	//fmt.Println("----Artist written----")
-	//produce(context.Background(), cNetwork, cBrokerAddress, cAlbumTopic, 0, AlbumJson)
-	//fmt.Println("----Album written-----")
-	//produce(context.Background(), cNetwork, cBrokerAddress, cTrackTopic, 0, TrackJson)
-	//fmt.Println("----Track written-----")
 }

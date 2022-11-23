@@ -136,6 +136,5 @@ func TestReadTrack(t *testing.T) {
 
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
-	assert.EqualValues(t, "32ca187e-ee25-4f18-b7d0-3b6713f24635", track.Track.Mbid)
-	assert.EqualValues(t, "Believe", track.Track.Name)
+	assert.EqualValues(t, "Believe", track.Name)
 }
