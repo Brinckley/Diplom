@@ -1,0 +1,127 @@
+version: '2.1'
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "5181:5181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 5181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks: [ "go_develop" ]
+
+  # reachable on 9092 from the host and on 29092 from inside docker compose
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - '9092:9092'
+    expose:
+      - '29092'
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:5181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1'
+      KAFKA_MIN_INSYNC_REPLICAS: '1'
+    networks: [ "go_develop" ]
+
+  init-kafka:
+    image: confluentinc/cp-kafka:latest
+    restart: on-failure
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      kafka-topics --bootstrap-server kafka:29092 --list
+
+      echo -e 'Creating kafka topics'
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Artist --replication-factor 1 --partitions 3
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Album  --replication-factor 1 --partitions 3
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Track  --replication-factor 1 --partitions 3
+
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka:29092 --list
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --topic Artist --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Album --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Track --describe"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    networks: [ "go_develop" ]
+
+  db:
+    image: postgres:latest
+    restart: always
+    command: "-c logging_collector=on"
+    ports:
+      - "5436:5432"
+    expose:
+      - "5432"
+    env_file:
+      - database.env
+    volumes:
+      - ./.database/postgres/data:/var/lib/postgresql/data
+      - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks: [ "go_develop" ]
+
+  etcd:
+    container_name: etcd
+    image: registry.cn-hangzhou.aliyuncs.com/coreos_etcd/etcd:v3
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    environment:
+      - ETCDCTL_API=3
+      - TZ=CST-8
+      - LANG=en_EN.UTF-8
+    command: 
+      etcd 
+      -name etcd 
+      -advertise-client-urls http://0.0.0.0:2379 
+      -listen-client-urls http://0.0.0.0:2379 
+      -listen-peer-urls http://0.0.0.0:2380 
+      -initial-cluster-token etcd-cluster 
+      -initial-cluster "etcd=http://etcd:2380" 
+      -initial-cluster-state new
+    volumes:
+      - /data/config/etcd/ca-certificates/:/etc/ssl/certs
+      - /data/conf/etcd/data:/etcd-data
+    networks: [ "go_develop" ]
+
+  producer:
+    build: 
+      context: ./producer
+    depends_on:
+      init-kafka:
+        condition: service_healthy
+    env_file:
+      - producer.env
+    networks: [ "go_develop" ]
+
+  consumer:
+    build: 
+      context: ./consumer
+    depends_on:
+      db:
+        condition: service_healthy
+      init-kafka:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+    env_file:
+      - consumer.env
+    networks: [ "go_develop" ]
+
+networks:
+    go_develop:
+        driver: bridge

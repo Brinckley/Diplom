@@ -1,0 +1,7 @@
+http://ws.audioscrobbler.com/2.0/
+?method=
+&api_key=
+&artist=
+&album=
+&track=
+&format=json

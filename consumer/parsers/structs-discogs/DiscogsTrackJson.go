@@ -1,0 +1,1 @@
+package structs_discogs
