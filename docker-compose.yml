@@ -1,6 +1,13 @@
 version: '2.1'
 services:
 
+  consul:
+    container_name: consul
+    image: consul:1.1.0
+    ports:
+      - 8500:8500
+    networks: [ "go_develop" ] 
+
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     ports:
@@ -38,12 +45,10 @@ services:
       "
       # blocks until kafka is reachable
       kafka-topics --bootstrap-server kafka:29092 --list
-
       echo -e 'Creating kafka topics'
       kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Artist --replication-factor 1 --partitions 3
       kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Album  --replication-factor 1 --partitions 3
       kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Track  --replication-factor 1 --partitions 3
-
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server kafka:29092 --list
       "
@@ -63,7 +68,7 @@ services:
     expose:
       - "5432"
     env_file:
-      - database.env
+      - ./env/database.env
     volumes:
       - ./.database/postgres/data:/var/lib/postgresql/data
       - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
@@ -74,53 +79,44 @@ services:
       retries: 15
     networks: [ "go_develop" ]
 
-  etcd:
-    container_name: etcd
-    image: registry.cn-hangzhou.aliyuncs.com/coreos_etcd/etcd:v3
-    ports:
-      - "2379:2379"
-      - "2380:2380"
-    environment:
-      - ETCDCTL_API=3
-      - TZ=CST-8
-      - LANG=en_EN.UTF-8
-    command: 
-      etcd 
-      -name etcd 
-      -advertise-client-urls http://0.0.0.0:2379 
-      -listen-client-urls http://0.0.0.0:2379 
-      -listen-peer-urls http://0.0.0.0:2380 
-      -initial-cluster-token etcd-cluster 
-      -initial-cluster "etcd=http://etcd:2380" 
-      -initial-cluster-state new
-    volumes:
-      - /data/config/etcd/ca-certificates/:/etc/ssl/certs
-      - /data/conf/etcd/data:/etcd-data
-    networks: [ "go_develop" ]
-
   producer:
     build: 
-      context: ./producer
+      context: ./apps/producer
     depends_on:
       init-kafka:
         condition: service_healthy
     env_file:
-      - producer.env
+      - ./env/producer.env
     networks: [ "go_develop" ]
 
   consumer:
     build: 
-      context: ./consumer
+      context: ./apps/consumer
     depends_on:
       db:
         condition: service_healthy
       init-kafka:
         condition: service_healthy
-      etcd:
-        condition: service_started
     env_file:
-      - consumer.env
+      - ./env/consumer.env
     networks: [ "go_develop" ]
+
+  tgclient:
+    build: 
+      context: ./apps/tgclient
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./env/tgclient.env
+    networks: [ "go_develop" ]
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2-amd64
+    env_file:
+      - ./env/elasticsearch.env
+    volumes:
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
 
 networks:
     go_develop:

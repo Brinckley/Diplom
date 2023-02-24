@@ -1,78 +1,79 @@
 CREATE TABLE IF NOT EXISTS artists(
       id          SERIAL   PRIMARY KEY,
-      aname       VARCHAR(100) NOT NULL,
+      name        VARCHAR(100) NOT NULL,
       bio         TEXT,
-      albumNum    INT,
       onTour      BOOLEAN,
-      picture     VARCHAR(255),
-      urlLastfm   VARCHAR(255),
-      urlDiscogs  VARCHAR(255)
---    lastfmJson  jsonb
---    discogs     jsonb
+      picture     VARCHAR(511),
+      idLastfm    VARCHAR(100),
+      urlLastfm   VARCHAR(511),
+      idDiscogs   VARCHAR(100),
+      urlDiscogs  VARCHAR(511),
+      genre       VARCHAR(31),
+
+      artistHash  BIGINT
     );
     
 
 CREATE TABLE IF NOT EXISTS albums(
       id          SERIAL   PRIMARY KEY,
-      aname       VARCHAR(100) NOT NULL,
-      release     DATE,
-      picture     VARCHAR(255),
+      name        VARCHAR(100) NOT NULL,
+      release     VARCHAR(100),
+	  urlLastfm   VARCHAR(511),
+	  urlDiscogs  VARCHAR(511),
+      picture     VARCHAR(511),
       trackCount  INT,
-	urlLastfm   VARCHAR(255),
-	urlDiscogs  VARCHAR(255)
---    lastfmJson  jsonb
---    discogs     jsonb
+
+      artistHash  BIGINT,
+      albumHash   BIGINT
     );
 
 CREATE TABLE IF NOT EXISTS tracks(
       id          SERIAL   PRIMARY KEY,
-	tname       VARCHAR(100) NOT NULL,
-      release     DATE,
-      lyrics      TEXT,
-      urlLastfm  VARCHAR(255)
---    lastfmJson  jsonb
---    discogs     jsonb
+	  name        VARCHAR(100) NOT NULL,
+      urlLastfm   VARCHAR(511),
+      duration    VARCHAR(100),
+      position    VARCHAR(100),
+
+      artistHash  BIGINT,
+      albumHash   BIGINT
     );
     
-ALTER TABLE artists 
-      ADD COLUMN IF NOT EXISTS album_id INT, 
-      ADD CONSTRAINT fk_album 
-      FOREIGN KEY (album_id) 
-      REFERENCES albums(ID)
-      ON UPDATE CASCADE ON DELETE CASCADE;
-ALTER TABLE artists 
-      ADD COLUMN IF NOT EXISTS track_id INT, 
-      ADD CONSTRAINT fk_track 
-      FOREIGN KEY (track_id) 
-      REFERENCES tracks(ID)
-      ON UPDATE CASCADE ON DELETE CASCADE;
+CREATE TABLE IF NOT EXISTS users(
+      id          SERIAL   PRIMARY KEY,
+      username    VARCHAR(100) UNIQUE NOT NULL,
+      firstName   VARCHAR(100) NOT NULL,
+      сhatID      INTEGER NOT NULL
+    );
 
-ALTER TABLE albums
-      ADD COLUMN IF NOT EXISTS artist_id INT, 
-      ADD CONSTRAINT fk_artist 
-      FOREIGN KEY (artist_id) 
-      REFERENCES artists(ID)
-      ON UPDATE CASCADE ON DELETE CASCADE;
-ALTER TABLE albums
-      ADD COLUMN IF NOT EXISTS track_id INT, 
-      ADD CONSTRAINT fk_track 
-      FOREIGN KEY (track_id) 
-      REFERENCES tracks(ID)
-      ON UPDATE CASCADE ON DELETE CASCADE;
+CREATE TABLE IF NOT EXISTS user_artist ( -- favourite artists storage --
+    id        SERIAL PRIMARY KEY,
+    user_id   INTEGER NOT NULL REFERENCES users,
+    artist_id INTEGER NOT NULL REFERENCES artists,
+    UNIQUE (user_id, artist_id)
+);
 
-ALTER TABLE tracks
-      ADD COLUMN IF NOT EXISTS artist_id INT, 
-      ADD CONSTRAINT fk_artist 
-      FOREIGN KEY (artist_id) 
-      REFERENCES artists(ID)
-      ON UPDATE CASCADE ON DELETE CASCADE;
-ALTER TABLE tracks
-      ADD COLUMN IF NOT EXISTS album_id INT, 
-      ADD CONSTRAINT fk_album 
-      FOREIGN KEY (album_id) 
-      REFERENCES albums(ID)
-      ON UPDATE CASCADE ON DELETE CASCADE;
+CREATE TABLE IF NOT EXISTS events (
+    id        SERIAL PRIMARY KEY,
+    title     VARCHAR(100) NOT NULL,
+    titleLink VARCHAR(200),
+    date      VARCHAR(100),
+    time      VARCHAR(100),
+    place     VARCHAR(100),
+    placeLink VARCHAR(100),
+    cost      VARCHAR(100)
+);
+
+CREATE TABLE IF NOT EXISTS artist_event ( 
+    id        SERIAL PRIMARY KEY,
+    artist_id INTEGER NOT NULL REFERENCES artists,
+    event_id  INTEGER NOT NULL REFERENCES events,
+    UNIQUE (artist_id, event_id)
+);
 
 SELECT * FROM artists;
 SELECT * FROM albums;
 SELECT * FROM tracks;
+SELECT * FROM users;
+SELECT * FROM events;
+SELECT * FROM user_artist;
+SELECT * FROM artist_event;
