@@ -1,7 +1,7 @@
 package tests
 
 import (
-	kassir_functions "events-fetcher/internal/parsers/kassir-parser/kassir-functions"
+	kassir_functions "events-fetcher/pkg/parsers/kassir-parser/kassir-functions"
 	_ "github.com/anaskhan96/soup"
 	"testing"
 )

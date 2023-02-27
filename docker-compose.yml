@@ -70,7 +70,7 @@ services:
     env_file:
       - ./env/database.env
     volumes:
-      - ./.database/postgres/data:/var/lib/postgresql/data
+      - ./database/postgres/data:/var/lib/postgresql/data
       - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -113,10 +113,22 @@ services:
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2-amd64
+    ports:
+      - '9200:9200'
     env_file:
       - ./env/elasticsearch.env
     volumes:
       - ./data/elasticsearch:/usr/share/elasticsearch/data
+
+  fetcher:
+    build: 
+      context: ./apps/events-fetcher
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./env/fetcher.env
+    networks: [ "go_develop" ]
 
 networks:
     go_develop:

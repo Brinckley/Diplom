@@ -2,7 +2,7 @@ package kassir_functions
 
 import (
 	"errors"
-	structs2 "events-fetcher/internal/parsers/kassir-parser/kassir-structs"
+	structs2 "events-fetcher/pkg/parsers/kassir-parser/kassir-structs"
 	"fmt"
 	"github.com/anaskhan96/soup"
 	"log"

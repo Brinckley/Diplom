@@ -1,14 +1,18 @@
 package main
 
 import (
-	kassir_functions "events-fetcher/internal/parsers/kassir-parser/kassir-functions"
+	"events-fetcher/pkg/storage/postgres"
 	"fmt"
 )
 
 func main() {
-	abbr, err := kassir_functions.CityAbbr("")
+	p := postgres.NewPostgres()
+	p.Init()
+	names, genres, err := p.GetArtistsNamesGenres()
 	if err != nil {
-		fmt.Println(err)
+		return
 	}
-	fmt.Println("Abbr :", abbr)
+	for i := 0; i < len(names); i++ {
+		fmt.Printf("%s  -  %s\n", names[i], genres[i])
+	}
 }
