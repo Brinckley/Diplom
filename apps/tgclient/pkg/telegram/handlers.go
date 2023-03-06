@@ -130,6 +130,11 @@ func (b *Bot) handleSubscriptionIntro(message *tgbotapi.Message) (int, error) {
 
 func (b *Bot) handleSubscription(message *tgbotapi.Message) (int, error) {
 	subscribe, err := b.storage.Subscribe(message)
+	if err == storage.ErrNoArtists {
+		msg := tgbotapi.NewMessage(message.Chat.ID, msgSubscribeFail)
+		_, err = b.bot.Send(msg)
+		return ResOk, err
+	}
 	if err != nil {
 		return ResFail, err
 	}

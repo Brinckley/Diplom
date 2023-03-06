@@ -112,13 +112,24 @@ services:
     networks: [ "go_develop" ]
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2-amd64
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.1
     ports:
-      - '9200:9200'
-    env_file:
-      - ./env/elasticsearch.env
+      - 9200:9200
     volumes:
-      - ./data/elasticsearch:/usr/share/elasticsearch/data
+      - ./esdata1:/var/lib/elasticsearch/esdata1
+    environment:
+      - cluster.name=docker-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: always
+    networks: [ "go_develop" ]
 
   fetcher:
     build: 
@@ -126,6 +137,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      elasticsearch:
+        condition: service_started
     env_file:
       - ./env/fetcher.env
     networks: [ "go_develop" ]

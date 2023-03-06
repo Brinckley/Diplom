@@ -3,11 +3,11 @@ CREATE TABLE IF NOT EXISTS artists(
       name        VARCHAR(100) NOT NULL,
       bio         TEXT,
       onTour      BOOLEAN,
-      picture     VARCHAR(511),
+      picture     VARCHAR(1023),
       idLastfm    VARCHAR(100),
-      urlLastfm   VARCHAR(511),
+      urlLastfm   VARCHAR(1023),
       idDiscogs   VARCHAR(100),
-      urlDiscogs  VARCHAR(511),
+      urlDiscogs  VARCHAR(1023),
       genre       VARCHAR(31),
 
       artistHash  BIGINT
@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS albums(
       id          SERIAL   PRIMARY KEY,
       name        VARCHAR(100) NOT NULL,
       release     VARCHAR(100),
-	  urlLastfm   VARCHAR(511),
-	  urlDiscogs  VARCHAR(511),
-      picture     VARCHAR(511),
+	  urlLastfm   VARCHAR(1023),
+	  urlDiscogs  VARCHAR(1023),
+      picture     VARCHAR(1023),
       trackCount  INT,
 
       artistHash  BIGINT,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS albums(
 CREATE TABLE IF NOT EXISTS tracks(
       id          SERIAL   PRIMARY KEY,
 	  name        VARCHAR(100) NOT NULL,
-      urlLastfm   VARCHAR(511),
+      urlLastfm   VARCHAR(1023),
       duration    VARCHAR(100),
       position    VARCHAR(100),
 

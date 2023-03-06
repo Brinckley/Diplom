@@ -76,12 +76,12 @@ func (p *TgPostgres) Registration(message *tgbotapi.Message) error {
 		return ErrUserExists
 	}
 
-	queryInsert := fmt.Sprintf("insert into %s (username, firstName) "+
-		"values ($1, $2) returning id;", p.cTableUsers)
+	queryInsert := fmt.Sprintf("insert into %s (username, firstName, сhatID) "+
+		"values ($1, $2, $3) returning id;", p.cTableUsers)
 	var userId int
 	err = conn.QueryRow(context.Background(),
 		queryInsert,
-		message.From.UserName, message.From.FirstName).Scan(&userId)
+		message.From.UserName, message.From.FirstName, message.Chat.ID).Scan(&userId)
 	CheckError(err, "users")
 	log.Println("User with id added :", userId)
 
@@ -179,9 +179,9 @@ func (p *TgPostgres) Subscribe(message *tgbotapi.Message) (bool, error) {
 	}
 	if existence, err := checkExistence(conn, p.cTableArtists, "name", artistName); err != nil || existence == false {
 		if existence == true {
-			return false, ErrNoArtists
+			return false, err
 		}
-		return false, err
+		return false, ErrNoArtists
 	}
 
 	subscribe, err := p.checkAndSubscribe(message.From.UserName, artistName)

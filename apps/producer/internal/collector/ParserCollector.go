@@ -91,7 +91,7 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 		if r.Artist == ArtistName && r.Type == "master" { // filter only on master releases
 			albumsNum++
 			// here we got the right name for the album, starting working with it....
-			time.Sleep(30 * time.Second)                                // anti antiDDOS pause
+			time.Sleep(15 * time.Second)                                // anti antiDDOS pause
 			discogsAlbumData := discogs_functions2.ReadMasterById(r.ID) // reading album data by id
 			// BUT sometimes id leads to another album that has nothing to do
 			// with the artist or searched album !!!! (discogs bug, I guess...)

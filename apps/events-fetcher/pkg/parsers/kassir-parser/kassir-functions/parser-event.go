@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"github.com/anaskhan96/soup"
 	"log"
+	"strings"
 )
 
-func LookAtSearchHtml(artistName, genre string) (structs2.Events, error) {
+func LookAtSearchHtml(artistName, genre string) ([]structs2.EventInfo, error) {
+	artistName = strings.Replace(artistName, " ", "%20", -1)
 	category, err := structs2.SelectGenre(genre)
 	if err != nil {
-		return structs2.Events{}, err
+		return []structs2.EventInfo{}, err
 	}
 
 	genreCategory := "&" + category
@@ -21,19 +23,19 @@ func LookAtSearchHtml(artistName, genre string) (structs2.Events, error) {
 	doc, err := getHTMLFromLink(fullUrl)
 	if err != nil {
 		log.Println("no such url")
-		return structs2.Events{}, err
+		return []structs2.EventInfo{}, err
 	}
 
 	docc := doc.
 		Find("div", "class", "tiles-container")
 	if docc.Error != nil {
 		log.Println("no info found")
-		return structs2.Events{}, err
+		return []structs2.EventInfo{}, err
 	}
 
 	commonPath := docc.FindAll("div", "class", "new--w-12")
 	if len(commonPath) == 0 {
-		return structs2.Events{}, errors.New("no info found")
+		return []structs2.EventInfo{}, errors.New("no info found")
 	}
 
 	var events []structs2.EventInfo
@@ -56,7 +58,8 @@ func LookAtSearchHtml(artistName, genre string) (structs2.Events, error) {
 		}
 		events = append(events, ei)
 	}
-	return structs2.Events{EventInfo: events}, nil
+	log.Printf("Artist '%s' data : %s", artistName, events)
+	return events, nil
 }
 
 func getHTMLFromLink(fullUrl string) (soup.Root, error) {
