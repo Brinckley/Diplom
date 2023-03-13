@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	kassir_functions "events-fetcher/pkg/parsers/kassir-parser/kassir-functions"
 	kassir_structs "events-fetcher/pkg/parsers/kassir-parser/kassir-structs"
 	"events-fetcher/pkg/storage/esearch"
 	"events-fetcher/pkg/storage/postgres"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v7"
 	"log"
 	"net/http"
 	"sync"
@@ -35,7 +33,8 @@ func main() {
 	for i := 0; i < len(names); i++ {
 		fmt.Printf("%s  -  %s\n", names[i], genres[i])
 	}
-	esclient, err := esearch.NewESClient()
+
+	esclient := esearch.NewESClient()
 	if err != nil {
 		log.Fatalf("[ERR] can't connect to elastic : %s", err.Error())
 	}
@@ -65,16 +64,13 @@ func main() {
 	wg.Wait()
 }
 
-func ReceiveFormChan(c chan []kassir_structs.EventInfo, id int, wg *sync.WaitGroup, mutex *sync.Mutex, client *elasticsearch.Client) {
+func ReceiveFormChan(c chan []kassir_structs.EventInfo, id int, wg *sync.WaitGroup, mutex *sync.Mutex, client *esearch.ESClient) {
 	defer func() {
 		mutex.Unlock()
 		wg.Done()
 	}()
 	mutex.Lock()
-	err := esearch.AddDocument(context.Background(), client, id, <-c)
-	if err != nil {
-		return
-	}
+	client.AddDocument(id, <-c)
 }
 
 // еще один топик для выхода

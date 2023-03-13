@@ -3,6 +3,7 @@ package kassir_structs
 import "encoding/json"
 
 type EventInfo struct {
+	ID        int    `json:"ID"`
 	Artist    string `json:"artist"`
 	Title     string `json:"title"`
 	TitleLink string `json:"titleLink"`
