@@ -87,7 +87,7 @@ func AddDocument(ctx context.Context, client *elasticsearch.Client, id int, docs
 
 		// Instantiate a request object
 		req := esapi.IndexRequest{
-			Index:      "some_index",
+			Index:      "artist_events",
 			DocumentID: strconv.Itoa(_id + id + 1),
 			Body:       strings.NewReader(bod),
 			Refresh:    "true",
