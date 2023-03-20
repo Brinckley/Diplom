@@ -39,6 +39,7 @@ func main() {
 		log.Fatalf("[ERR] can't connect to elastic : %s", err.Error())
 	}
 	log.Printf("[CONTENT] Type of client : %T, client value : %v\n", esclient, esclient)
+	esclient.CheckConnection()
 
 	log.Println("------------------- All artist from db have been read -------------------")
 

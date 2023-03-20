@@ -49,11 +49,12 @@ services:
       kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Artist --replication-factor 1 --partitions 3
       kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Album  --replication-factor 1 --partitions 3
       kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Track  --replication-factor 1 --partitions 3
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic Event  --replication-factor 1 --partitions 3
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server kafka:29092 --list
       "
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --topic Artist --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Album --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Track --describe"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --topic Artist --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Album --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Track --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Event --describe"]
       interval: 2s
       timeout: 2s
       retries: 15
@@ -70,7 +71,7 @@ services:
     env_file:
       - ./env/database.env
     volumes:
-      - ./database/postgres/data:/var/lib/postgresql/data
+      - ./data_postgres/database/postgres/data:/var/lib/postgresql/data
       - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -113,11 +114,11 @@ services:
 
   elasticsearch:
     container_name: elasticsearch
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
     ports:
       - 9200:9200
     volumes:
-      - ./esdata1:/var/lib/elasticsearch/esdata1
+      - ./data_elasticsearch/esdata1:/var/lib/elasticsearch/esdata1
     environment:
       - cluster.name=docker-cluster
       - discovery.type=single-node
@@ -141,6 +142,20 @@ services:
         condition: service_started
     env_file:
       - ./env/fetcher.env
+    networks: [ "go_develop" ]
+
+  checker:
+    build: 
+      context: ./apps/checker
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+ #     init-kafka:
+ #       condition: service_healthy
+    env_file:
+      - ./env/checker.env
     networks: [ "go_develop" ]
 
 networks:

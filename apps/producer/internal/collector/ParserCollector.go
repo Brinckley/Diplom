@@ -170,4 +170,5 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 	}
 	dataArtist = bytes.Trim(dataArtist, "\x00")
 	kafka_producer.Produce("Artist", dataArtist, nil)
+	time.Sleep(60 * time.Second)
 }

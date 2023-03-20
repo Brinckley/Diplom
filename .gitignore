@@ -1,3 +1,6 @@
 .idea/
 env/
 data
+.database/
+data_elasticsearch/
+data_postgres/
