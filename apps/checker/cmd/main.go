@@ -6,6 +6,7 @@ import (
 	"checker/pkg/storage/postgres"
 	"context"
 	"log"
+	"sync"
 )
 
 func main() {
@@ -18,21 +19,40 @@ func main() {
 	log.Println("[INFO] names read")
 	log.Println("Names : ", names)
 
-	ekafka := kafka.NewKafka()
 	esclient := esearch.NewESClient() // connect to esearch, where we will get info about every event
-	for i := 0; i < len(names); i++ {
-		log.Println("\nSearching for name : ", names[i])
-		events, err := esclient.SearchArtist(names[i])
-		if err != nil {
+	ekafka := kafka.NewKafka()
+
+	eventsChan := make(chan []esearch.ElasticDocs, 1)
+	var mutex sync.Mutex
+	cnt := len(names)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < cnt; i++ {
+		wg.Add(1)
+		go func(name string) {
+			//log.Println("\nSearching for name : ", names[i])
+			events, err := esclient.SearchArtist(names[i])
 			if err != nil {
 				log.Fatalln("[ERR] ", err.Error())
 			}
-			continue
-		}
-		err = ekafka.ProduceEvents(context.Background(), events)
-		if err != nil {
-			log.Fatalln("[ERR] ", err.Error())
-		}
+			eventsChan <- events
+		}(names[i])
+	}
 
+	for i := 0; i < cnt; i++ {
+		go ReceiveFormChan(eventsChan, ekafka, &wg, &mutex)
+	}
+	wg.Wait()
+}
+
+func ReceiveFormChan(c chan []esearch.ElasticDocs, ekafka *kafka.ClientKafka, wg *sync.WaitGroup, mutex *sync.Mutex, ) {
+	defer func() {
+		mutex.Unlock()
+		wg.Done()
+	}()
+	mutex.Lock()
+	err := ekafka.ProduceEvents(context.Background(), <-c)
+	if err != nil {
+		log.Println("[ERR] can't send the message to kafka : ", err.Error())
 	}
 }
