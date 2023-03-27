@@ -29,6 +29,7 @@ type TgPostgres struct {
 	cTableUserArtist string
 	cDsnL            string
 	cDsnR            string
+	cDsn             string
 }
 
 func NewPostgres() *TgPostgres {
@@ -48,6 +49,7 @@ func (p *TgPostgres) Init() {
 	p.cDsnL = os.Getenv("DSN_LEFT")
 	p.cDsnR = os.Getenv("DSN_RIGHT")
 	p.cTableUserArtist = os.Getenv("DB_NAME_USER_ARTIST")
+	p.cDsn = p.cDsnL + p.cDBPassword + p.cDsnR
 }
 
 func CheckError(err error, table string) {
@@ -60,9 +62,7 @@ func CheckError(err error, table string) {
 }
 
 func (p *TgPostgres) Registration(message *tgbotapi.Message) error {
-	dsn := p.cDsnL + p.cDBPassword + p.cDsnR
-
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		return fmt.Errorf("Unable to connect to database: %v\n", err)
 	}
@@ -89,9 +89,7 @@ func (p *TgPostgres) Registration(message *tgbotapi.Message) error {
 }
 
 func (p *TgPostgres) GetAllArtists() ([]string, error) {
-	dsn := p.cDsnL + p.cDBPassword + p.cDsnR
-
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to connect to database: %v\n", err)
 	}
@@ -122,9 +120,7 @@ func (p *TgPostgres) GetAllArtists() ([]string, error) {
 }
 
 func (p *TgPostgres) GetFavorites(message *tgbotapi.Message) ([]string, error) {
-	dsn := p.cDsnL + p.cDBPassword + p.cDsnR
-
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to connect to database: %v\n", err)
 	}
@@ -163,9 +159,7 @@ func (p *TgPostgres) Subscribe(message *tgbotapi.Message) (bool, error) {
 	// 3. check pair existence
 	// 4. add pair if new
 	artistName := strings.TrimSpace(message.Text)
-	dsn := p.cDsnL + p.cDBPassword + p.cDsnR
-
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		return false, fmt.Errorf("Unable to connect to database: %v\n", err)
 	}
@@ -197,9 +191,7 @@ func (p *TgPostgres) Unsubscribe(message *tgbotapi.Message) (bool, error) {
 	// 3. check pair existence
 	// 4. remove pair if exists
 	artistName := strings.TrimSpace(message.Text)
-	dsn := p.cDsnL + p.cDBPassword + p.cDsnR
-
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		return false, fmt.Errorf("Unable to connect to database: %v\n", err)
 	}
@@ -225,9 +217,43 @@ func (p *TgPostgres) Unsubscribe(message *tgbotapi.Message) (bool, error) {
 	return subscribe, nil
 }
 
+func (p *TgPostgres) GetAllSubscribers(artistName string) ([]int64, error) {
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to connect to database: %v\n", err)
+	}
+	defer func() { _ = conn.Close(context.Background()) }()
+
+	querySelectSubs := fmt.Sprintf(
+		"select %s.сhatid from %s "+
+			"join %s on %s.id = %s.user_id "+
+			"join %s on %s.id = %s.artist_id and %s.name = '%s'",
+		p.cTableUsers, p.cTableUsers,
+		p.cTableUserArtist, p.cTableUsers, p.cTableUserArtist,
+		p.cTableArtists, p.cTableArtists, p.cTableUserArtist, p.cTableArtists,
+		artistName)
+	log.Println("Get All Subscriber query : ", querySelectSubs)
+
+	rows, err := conn.Query(context.Background(), querySelectSubs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var subscribers []int64
+	for rows.Next() {
+		var sub int64
+		err := rows.Scan(&sub)
+		if err != nil {
+			return nil, err
+		}
+		subscribers = append(subscribers, sub)
+	}
+	return subscribers, nil
+}
+
 func (p *TgPostgres) checkAndSubscribe(username string, artist string) (bool, error) {
-	dsn := p.cDsnL + p.cDBPassword + p.cDsnR
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		return false, fmt.Errorf("Unable to connect to database: %v\n", err)
 	}
@@ -264,8 +290,7 @@ func (p *TgPostgres) checkAndSubscribe(username string, artist string) (bool, er
 }
 
 func (p *TgPostgres) checkAndUnsubscribe(username string, artist string) (bool, error) {
-	dsn := p.cDsnL + p.cDBPassword + p.cDsnR
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		return false, fmt.Errorf("Unable to connect to database: %v\n", err)
 	}

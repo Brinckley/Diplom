@@ -4,23 +4,28 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/sirupsen/logrus"
+	"log"
 	"math/rand"
 	"strconv"
+	"sync"
+	"tgclient/pkg/kafka"
 	"tgclient/pkg/storage"
 	"time"
 )
 
 type Bot struct {
-	bot     *tgbotapi.BotAPI
-	logger  *logrus.Logger
-	storage *storage.TgPostgres
+	bot          *tgbotapi.BotAPI
+	logger       *logrus.Logger
+	storage      *storage.TgPostgres
+	receiverChan chan kafka.Event
 }
 
-func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres) *Bot {
+func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc chan kafka.Event) *Bot {
 	return &Bot{
-		bot:     bot,
-		logger:  logger,
-		storage: storage,
+		bot:          bot,
+		logger:       logger,
+		storage:      storage,
+		receiverChan: rc,
 	}
 }
 
@@ -48,6 +53,35 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 	rand.Seed(time.Now().UnixNano())
 	counter := rand.Intn(10) + 4
 	for update := range updates {
+		select {
+		case event, ok := <-b.receiverChan:
+			if ok {
+				log.Println("[INFO] event received")
+				subscribers, err := b.storage.GetAllSubscribers(event.Artist)
+				if err != nil {
+					log.Println("[ERR] can't receive event from kafka!")
+					continue
+				}
+
+				var wg sync.WaitGroup
+				log.Println("[INFO] starting iteration over list of subscribers...")
+				for sub := range subscribers {
+					wg.Add(1)
+					go func(sub int64, event kafka.Event) {
+						defer wg.Done()
+						_, err := b.handleNewEventReceived(sub, event)
+						if err != nil {
+							log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
+							return
+						}
+					}(int64(sub), event)
+				}
+				wg.Wait()
+			}
+		default:
+			b.logger.Println("[UPD] no event updates found")
+		}
+
 		if update.Message == nil {
 			continue
 		}

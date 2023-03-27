@@ -1,7 +1,10 @@
 package telegram
 
 import (
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"log"
+	"tgclient/pkg/kafka"
 	"tgclient/pkg/storage"
 )
 
@@ -12,6 +15,8 @@ const (
 	favoritesCmd   = "favorites"
 	subscribeCmd   = "subscribe"
 	unsubscribeCmd = "unsubscribe"
+
+	debugCmd = "debugSubscriptions"
 )
 
 const (
@@ -50,9 +55,23 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
 		return b.handleUnsubscriptionIntro(message)
 	case helpCmd:
 		return b.handleHelpCmd(message)
+	case debugCmd:
+		return b.handleDebugSubsCmd(message)
 	default:
 		return b.handleUnknownCmd(message)
 	}
+}
+
+func (b *Bot) handleDebugSubsCmd(message *tgbotapi.Message) (int, error) {
+	subscribers, err := b.storage.GetAllSubscribers("Rammstein")
+	if err != nil {
+		return 0, err
+	}
+	log.Println(subscribers)
+	subs := fmt.Sprintf("%s", subscribers)
+	msg := tgbotapi.NewMessage(message.Chat.ID, subs)
+	_, err = b.bot.Send(msg)
+	return ResOk, err
 }
 
 func (b *Bot) handleStartCmd(message *tgbotapi.Message) (int, error) {
@@ -69,6 +88,13 @@ func (b *Bot) handleStartCmd(message *tgbotapi.Message) (int, error) {
 
 func (b *Bot) handleStartAgainCmd(message *tgbotapi.Message) (int, error) {
 	msg := tgbotapi.NewMessage(message.Chat.ID, msgStartAgainCommand)
+	_, err := b.bot.Send(msg)
+	return ResOk, err
+}
+
+func (b *Bot) handleNewEventReceived(chatId int64, event kafka.Event) (int, error) {
+	txtMsg := event.CreateNotification()
+	msg := tgbotapi.NewMessage(chatId, txtMsg)
 	_, err := b.bot.Send(msg)
 	return ResOk, err
 }

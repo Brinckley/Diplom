@@ -14,7 +14,9 @@ const msgListCommand = "Get Help by pressing /help 🧙‍♂️\n" +
 	"Get artists list by pressing -> /artists 🎸\n" +
 	"Add the artist to favorites by pressing -> /subscribe 🖋\n" +
 	"Remove the artist from favorites by pressing -> /unsubscribe ❌\n" +
-	"Get your favorites here -> /favorites! 🎧\n"
+	"Get your favorites here -> /favorites! 🎧\n" +
+	"\n\n[DEBUG OPTIONS] : \n" +
+	"Debug Subscriptions for Rammstein -> /debugSubscriptions\n"
 
 const msgAskArtist = "Haven't found artist you want? Add it here -> /addArtist"
 
