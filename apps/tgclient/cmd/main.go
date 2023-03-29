@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -33,17 +34,31 @@ func main() {
 	}
 	bot.Debug = true
 
+	chanUpd, err := telegram.InitUpdatesChannel(bot)
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 	chanEvent := make(chan kafka.Event)
 
-	tgBot := telegram.NewBot(bot, &logger, pStorage, chanEvent) // creating custom bot client
-	if err := tgBot.Start(); err != nil {
-		log.Fatalln("[ERR] Unable to start bot")
-	}
+	tgBot := telegram.NewBot(bot, &logger, pStorage, &chanUpd) // creating custom bot client
+	clKafka := kafka.NewKafka(&chanUpd)                        // creating new kafka client
+
+	go clKafka.ConsumeEvents(context.Background(), chanEvent, &wg)
+	go func(wg *sync.WaitGroup) {
+		err := tgBot.Start(wg)
+		if err != nil {
+			log.Fatalln("[ERR] Unable to start bot")
+		}
+	}(&wg)
+
+	wg.Wait()
 }
 
 // when update time?!
+
+// parallel needed here :
+// tgclinet consuming tgupdates
+// tgclient consuming kafka updates
 
 // getting info from kafka
 // select users that are connected with this artist

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/segmentio/kafka-go"
+	"log"
 	"os"
 	"strings"
 )
@@ -39,6 +40,7 @@ func (k *ClientKafka) init() {
 
 func (k *ClientKafka) ProduceEvents(ctx context.Context, docs []esearch.ElasticDocs) error {
 	for _, doc := range docs {
+		log.Println("[INFO] sending data of doc : ", doc.Artist)
 		eventJson, err := json.Marshal(doc)
 		if err != nil {
 			return fmt.Errorf("[ERR] cannot unmarshal the event : %s\n", err.Error())

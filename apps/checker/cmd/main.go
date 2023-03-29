@@ -30,8 +30,8 @@ func main() {
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)
 		go func(name string) {
-			//log.Println("\nSearching for name : ", names[i])
-			events, err := esclient.SearchArtist(names[i])
+			log.Println("\nSearching for name : ", name)
+			events, err := esclient.SearchArtist(name)
 			if err != nil {
 				log.Fatalln("[ERR] ", err.Error())
 			}
@@ -45,7 +45,7 @@ func main() {
 	wg.Wait()
 }
 
-func ReceiveFormChan(c chan []esearch.ElasticDocs, ekafka *kafka.ClientKafka, wg *sync.WaitGroup, mutex *sync.Mutex, ) {
+func ReceiveFormChan(c chan []esearch.ElasticDocs, ekafka *kafka.ClientKafka, wg *sync.WaitGroup, mutex *sync.Mutex) {
 	defer func() {
 		mutex.Unlock()
 		wg.Done()

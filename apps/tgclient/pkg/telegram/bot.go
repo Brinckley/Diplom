@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
-	"tgclient/pkg/kafka"
 	"tgclient/pkg/storage"
 	"time"
 )
@@ -17,10 +16,17 @@ type Bot struct {
 	bot          *tgbotapi.BotAPI
 	logger       *logrus.Logger
 	storage      *storage.TgPostgres
-	receiverChan chan kafka.Event
+	receiverChan *tgbotapi.UpdatesChannel
 }
 
-func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc chan kafka.Event) *Bot {
+func InitUpdatesChannel(b *tgbotapi.BotAPI) (tgbotapi.UpdatesChannel, error) {
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 10
+
+	return b.GetUpdatesChan(u)
+}
+
+func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc *tgbotapi.UpdatesChannel) *Bot {
 	return &Bot{
 		bot:          bot,
 		logger:       logger,
@@ -29,57 +35,39 @@ func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPost
 	}
 }
 
-func (b *Bot) Start() error {
+func (b *Bot) Start(wg *sync.WaitGroup) error {
+	defer wg.Done()
 	b.logger.Println("Authorised with username : ", b.bot.Self.UserName)
-
-	updates, err := b.initUpdatesChannel()
-	if err != nil {
-		return err
-	}
-
-	b.handleUpdates(updates)
+	b.handleUpdates(*b.receiverChan)
 	return nil
-}
-
-func (b *Bot) initUpdatesChannel() (tgbotapi.UpdatesChannel, error) {
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 10
-
-	return b.bot.GetUpdatesChan(u)
 }
 
 func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 	prev := "none"
 	rand.Seed(time.Now().UnixNano())
 	counter := rand.Intn(10) + 4
+
 	for update := range updates {
-		select {
-		case event, ok := <-b.receiverChan:
-			if ok {
-				log.Println("[INFO] event received")
-				subscribers, err := b.storage.GetAllSubscribers(event.Artist)
+		if update.Message.MessageID == -1 {
+			log.Println("[INFO] event received")
+			subscribers, err := b.storage.GetAllSubscribers(event.Artist)
+			if err != nil {
+				log.Println("[ERR] can't receive event from kafka!")
+				continue
+			}
+
+			log.Println("[INFO] starting iteration over list of subscribers...")
+			log.Println("[INFO] all list of subs : ", subscribers)
+
+			for _, sub := range subscribers {
+				log.Printf("[INFO STEP] int64 val : %v\n", sub)
+				_, err := b.handleNewEventReceived(sub, event)
 				if err != nil {
-					log.Println("[ERR] can't receive event from kafka!")
-					continue
+					log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
+					return
 				}
 
-				var wg sync.WaitGroup
-				log.Println("[INFO] starting iteration over list of subscribers...")
-				for sub := range subscribers {
-					wg.Add(1)
-					go func(sub int64, event kafka.Event) {
-						defer wg.Done()
-						_, err := b.handleNewEventReceived(sub, event)
-						if err != nil {
-							log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
-							return
-						}
-					}(int64(sub), event)
-				}
-				wg.Wait()
 			}
-		default:
-			b.logger.Println("[UPD] no event updates found")
 		}
 
 		if update.Message == nil {
