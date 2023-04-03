@@ -1,27 +1,18 @@
 package main
 
 import (
-	"consumer/internal/etcd"
 	"consumer/internal/kafka"
 	"consumer/internal/postgres"
+	"github.com/sirupsen/logrus"
+	"os"
 )
 
-// https://docs.kudago.com/api/#
-
 func main() {
-	// init all environment
-	kafka.InitConsumer()
-	postgres.InitDatabase()
-	etcd.InitETCD()
+	// init environment
+	logger := logrus.Logger{Formatter: &logrus.JSONFormatter{}} // creating and initializing the logger
+	logger.SetOutput(os.Stdout)
 
-	kafka.ConsumeAndSend()
-
-	// consuming data from three kafka topics
-	//dAr, dAl, dTr := kafka.ReadAll(context.Background(), 0)
-
-	// inserting data into db
-	//postgres.PGXInsert(dAr, dAl, dTr)
-
-	// connecting to etcd
-	// etcd.ConnectETCD()
+	postgresClient := postgres.NewPostgres(&logger)
+	kafkaClient := kafka.NewKafka(postgresClient, &logger)
+	kafkaClient.ConsumeAndSend()
 }

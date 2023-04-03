@@ -20,6 +20,7 @@ require (
 	github.com/klauspost/compress v1.15.7 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/segmentio/consul-go v1.3.0 // indirect
+	github.com/sirupsen/logrus v1.9.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect

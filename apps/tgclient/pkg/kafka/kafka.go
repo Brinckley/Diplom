@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"os"
@@ -18,15 +17,12 @@ type ClientKafka struct {
 	eventTopic    string
 	l             *log.Logger
 
-	reader     *kafka.Reader
-	tgUser     *tgbotapi.User
-	senderChan *tgbotapi.UpdatesChannel
+	reader *kafka.Reader
 }
 
-func NewKafka(channel *tgbotapi.UpdatesChannel) *ClientKafka {
+func NewKafka() *ClientKafka {
 	var k ClientKafka
 	k.init()
-	k.senderChan = channel
 	return &k
 }
 
@@ -41,14 +37,10 @@ func (k *ClientKafka) init() {
 		Topic:       k.eventTopic,
 		MinBytes:    5,
 		MaxBytes:    1e6,
-		StartOffset: kafka.FirstOffset,
+		StartOffset: kafka.LastOffset,
 		MaxWait:     3 * time.Second,
 		Logger:      k.l,
 	})
-	k.tgUser = &tgbotapi.User{
-		ID:        -1,
-		FirstName: "Kafka",
-	}
 	log.Println("[INFO] kafka initialization finished")
 }
 
@@ -70,20 +62,7 @@ func (k *ClientKafka) ConsumeEvents(ctx context.Context, ueChan chan Event, wg *
 		time.Sleep(5 * time.Second)
 		// sending msg data to channel
 		log.Println("[INFO] received msg about artist : ", event.Artist)
-		updEvent, err := k.createUpdateFromEvent(event)
-		ueChan <- updEvent
+		ueChan <- event
 	}
 	wg.Done()
-}
-
-func (k *ClientKafka) createUpdateFromEvent(event Event) (tgbotapi.Update, error) {
-	return tgbotapi.Update{
-		UpdateID: -1,
-		Message: &tgbotapi.Message{
-			MessageID: -1,
-			From:      k.tgUser,
-			Date:      0,
-			Text:      event.CreateNotification(),
-		},
-	}, nil
 }

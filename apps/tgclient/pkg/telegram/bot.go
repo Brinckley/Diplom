@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
+	"tgclient/pkg/kafka"
 	"tgclient/pkg/storage"
 	"time"
 )
@@ -16,62 +17,107 @@ type Bot struct {
 	bot          *tgbotapi.BotAPI
 	logger       *logrus.Logger
 	storage      *storage.TgPostgres
-	receiverChan *tgbotapi.UpdatesChannel
+	receiverChan chan kafka.Event
+
+	updates tgbotapi.UpdatesChannel
 }
 
-func InitUpdatesChannel(b *tgbotapi.BotAPI) (tgbotapi.UpdatesChannel, error) {
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 10
-
-	return b.GetUpdatesChan(u)
-}
-
-func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc *tgbotapi.UpdatesChannel) *Bot {
-	return &Bot{
+func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc chan kafka.Event) *Bot {
+	b := &Bot{
 		bot:          bot,
 		logger:       logger,
 		storage:      storage,
 		receiverChan: rc,
 	}
+	err := b.initUpdatesChannel()
+	if err != nil {
+		return nil
+	}
+	return b
 }
 
-func (b *Bot) Start(wg *sync.WaitGroup) error {
+func (b *Bot) initUpdatesChannel() error {
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 10
+
+	var err error
+	b.updates, err = b.bot.GetUpdatesChan(u)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Bot) StartHandling(wg *sync.WaitGroup) error {
 	defer wg.Done()
 	b.logger.Println("Authorised with username : ", b.bot.Self.UserName)
-	b.handleUpdates(*b.receiverChan)
+	for {
+		b.handleUpdates(b.updates)
+	}
 	return nil
+}
+
+func (b *Bot) StartHandlingEventUpdates(group *sync.WaitGroup) {
+	defer group.Done()
+	for {
+		select {
+		case event, ok := <-b.receiverChan:
+			if ok {
+				log.Println("[INFO] event received")
+				subscribers, err := b.storage.GetAllSubscribers(event.Artist)
+				if err != nil {
+					log.Println("[ERR] can't receive event from kafka!")
+					return
+				}
+
+				log.Println("[INFO] starting iteration over list of subscribers...")
+				log.Println("[INFO] all list of subs : ", subscribers)
+
+				for _, sub := range subscribers {
+					log.Printf("[INFO STEP] int64 val : %v\n", sub)
+					_, err := b.handleNewEventReceived(sub, event)
+					if err != nil {
+						log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
+						return
+					}
+				}
+			}
+		default:
+			b.logger.Println("[UPD] no event updates found")
+		}
+		time.Sleep(10 * time.Second)
+	}
 }
 
 func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 	prev := "none"
 	rand.Seed(time.Now().UnixNano())
 	counter := rand.Intn(10) + 4
-
 	for update := range updates {
-		if update.Message.MessageID == -1 {
-			log.Println("[INFO] event received")
-			subscribers, err := b.storage.GetAllSubscribers(event.Artist)
-			if err != nil {
-				log.Println("[ERR] can't receive event from kafka!")
-				continue
-			}
-
-			log.Println("[INFO] starting iteration over list of subscribers...")
-			log.Println("[INFO] all list of subs : ", subscribers)
-
-			for _, sub := range subscribers {
-				log.Printf("[INFO STEP] int64 val : %v\n", sub)
-				_, err := b.handleNewEventReceived(sub, event)
+		select {
+		case event, ok := <-b.receiverChan:
+			if ok {
+				log.Println("[INFO] event received")
+				subscribers, err := b.storage.GetAllSubscribers(event.Artist)
 				if err != nil {
-					log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
+					log.Println("[ERR] can't receive event from kafka!")
 					return
 				}
 
-			}
-		}
+				log.Println("[INFO] starting iteration over list of subscribers...")
+				log.Println("[INFO] all list of subs : ", subscribers)
 
-		if update.Message == nil {
-			continue
+				for _, sub := range subscribers {
+					log.Printf("[INFO STEP] int64 val : %v\n", sub)
+					_, err := b.handleNewEventReceived(sub, event)
+					if err != nil {
+						log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
+						return
+					}
+				}
+			}
+		default:
+			b.logger.Println("[UPD] no event updates found")
 		}
 		fmt.Println("Prev cmd : ", prev)
 
@@ -106,6 +152,7 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 			b.logger.Printf("[ERR] Can't handle message '%s', err : %s", update.Message.Text, err.Error())
 		}
 	}
+	time.Sleep(5 * time.Second)
 }
 
 func (b *Bot) waitForAdd(update tgbotapi.Update) bool {

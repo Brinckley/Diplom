@@ -4,68 +4,44 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/sirupsen/logrus"
 	"log"
 	"os"
 )
 
-var cDialect = ""
-var cHost = ""
-var cDBPort = ""
-var cDBUser = ""
-var cDBPassword = ""
-var cDBName = ""
-var cTableNameArtist = ""
-var cTableNameAlbum = ""
-var cTableNameTrack = ""
-var cTableNameArtistsAlbums = ""
-var cTableNameAlbumsTracks = ""
-var cDsnL = ""
-var cDsnR = ""
+type ClientPostgres struct {
+	cDBPassword      string
+	cTableNameArtist string
+	cTableNameAlbum  string
+	cTableNameTrack  string
+	cDsnL            string
+	cDsnR            string
+	cDsn             string
+
+	logger *logrus.Logger
+}
 
 var err error
 
-func InitDatabase() {
-	cDBPort = os.Getenv("DB_PORT")
-	cDBPassword = os.Getenv("DB_PASSWORD")
-	cDBName = os.Getenv("DB_NAME")
-	cTableNameArtist = os.Getenv("DB_NAME_ARTIST")
-	cTableNameAlbum = os.Getenv("DB_NAME_ALBUM")
-	cTableNameTrack = os.Getenv("DB_NAME_TRACK")
-	cTableNameArtistsAlbums = os.Getenv("DB_NAME_ARTIST_ALBUM")
-	cTableNameAlbumsTracks = os.Getenv("DB_NAME_ALBUM_TRACK")
-	cDsnL = os.Getenv("DSN_LEFT")
-	cDsnR = os.Getenv("DSN_RIGHT")
+func NewPostgres(logger *logrus.Logger) *ClientPostgres {
+	var cp ClientPostgres
+	cp.logger = logger
+	cp.init()
+	return &cp
 }
 
-func CheckError(err error, db string) {
-	if err != nil {
-		fmt.Println("Failed connecting to table :", db)
-		log.Fatal(err)
-	} else {
-		fmt.Println("Successfully connected to the table :", db)
-	}
+func (p *ClientPostgres) init() {
+	p.cDBPassword = os.Getenv("DB_PASSWORD")
+	p.cTableNameArtist = os.Getenv("DB_NAME_ARTIST")
+	p.cTableNameAlbum = os.Getenv("DB_NAME_ALBUM")
+	p.cTableNameTrack = os.Getenv("DB_NAME_TRACK")
+	p.cDsnL = os.Getenv("DSN_LEFT")
+	p.cDsnR = os.Getenv("DSN_RIGHT")
+	p.cDsn = p.cDsnL + p.cDBPassword + p.cDsnR
 }
 
-/*
-CREATE TABLE IF NOT EXISTS artists(
-      id          SERIAL   PRIMARY KEY,
-      name        VARCHAR(100) NOT NULL,
-      onTour      BOOLEAN,
-      picture     VARCHAR(255),
-      idLastfm    VARCHAR(255),
-      urlLastfm   VARCHAR(255),
-      idDiscogs   VARCHAR(255),
-      urlDiscogs  VARCHAR(255),
-      genre       VARCHAR(31),
-
-      artistHash  INTEGER
-    );
-*/
-
-func DBSelectArtists() {
-	dsn := cDsnL + cDBPassword + cDsnR
-	//log.Println("DSN : ", dsn)
-	conn, err := pgx.Connect(context.Background(), dsn)
+func (p *ClientPostgres) DBSelectArtists() {
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
@@ -90,9 +66,8 @@ func DBSelectArtists() {
 	}
 }
 
-func DBInsertArtist(artist ArtistDB) {
-	dsn := cDsnL + cDBPassword + cDsnR
-	conn, err := pgx.Connect(context.Background(), dsn)
+func (p *ClientPostgres) DBInsertArtist(artist ArtistDB) {
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
@@ -101,39 +76,23 @@ func DBInsertArtist(artist ArtistDB) {
 
 	var artistId int
 	queryInsert := fmt.Sprintf("insert into %s (name, bio, onTour, picture, idLastfm, idDiscogs, genre, urlLastfm, urlDiscogs, artistHash) "+
-		"values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id;", cTableNameArtist)
+		"values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id;", p.cTableNameArtist)
 	err = conn.QueryRow(context.Background(),
 		queryInsert,
 		artist.Name, artist.Bio, artist.OnTour, artist.Picture, artist.IdLastfm, artist.IdDiscogs, artist.Genre,
 		artist.UrlLastfm, artist.UrlDiscogs, artist.ArtistHash).Scan(&artistId)
-	CheckError(err, "Artists")
+	checkError(err, "Artists")
 	log.Println("Artist with id added :", artistId)
 }
 
-/*
-CREATE TABLE IF NOT EXISTS albums(
-      id          SERIAL   PRIMARY KEY,
-      name        VARCHAR(100) NOT NULL,
-      release     VARCHAR(100),
-	  urlLastfm   VARCHAR(255),
-	  urlDiscogs  VARCHAR(255),
-      picture     VARCHAR(255),
-      trackCount  INTEGER,
-
-      artistHash  INTEGER,
-      albumHash   INTEGER
-    );
-*/
-
-func DBSelectAlbums() {
-	dsn := cDsnL + cDBPassword + cDsnR
-	conn, err := pgx.Connect(context.Background(), dsn)
+func (p *ClientPostgres) DBSelectAlbums() {
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
 	defer conn.Close(context.Background())
-	rows, err := conn.Query(context.Background(), "select * from "+cTableNameAlbum)
+	rows, err := conn.Query(context.Background(), "select * from "+p.cTableNameAlbum)
 	if err != nil {
 		panic(err)
 	}
@@ -151,9 +110,8 @@ func DBSelectAlbums() {
 	}
 }
 
-func DBInsertAlbum(album AlbumDB) {
-	dsn := cDsnL + cDBPassword + cDsnR
-	conn, err := pgx.Connect(context.Background(), dsn)
+func (p *ClientPostgres) DBInsertAlbum(album AlbumDB) {
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
@@ -162,37 +120,23 @@ func DBInsertAlbum(album AlbumDB) {
 
 	var albumId int
 	queryInsert := fmt.Sprintf("insert into %s (name, release, urlLastfm, urlDiscogs, picture, trackCount, artistHash, albumHash) "+
-		"values ($1, $2, $3, $4, $5, $6, $7, $8) returning id;", cTableNameAlbum)
+		"values ($1, $2, $3, $4, $5, $6, $7, $8) returning id;", p.cTableNameAlbum)
 	err = conn.QueryRow(context.Background(),
 		queryInsert,
 		album.Name, album.Release, album.UrlLastfm, album.UrlDiscogs, album.Picture,
 		album.TrackCount, album.ArtistHash, album.AlbumHash).Scan(&albumId)
-	CheckError(err, "Albums")
+	checkError(err, "Albums")
 	log.Println("Album with id added :", albumId)
 }
 
-/*
-CREATE TABLE IF NOT EXISTS tracks(
-      id          SERIAL   PRIMARY KEY,
-	  name        VARCHAR(100) NOT NULL,
-      urlLastfm   VARCHAR(255),
-      duration    VARCHAR(100),
-      position    VARCHAR(100),
-
-      artistHash  INTEGER,
-      albumHash   INTEGER
-    );
-*/
-
-func DBSelectTracks() {
-	dsn := cDsnL + cDBPassword + cDsnR
-	conn, err := pgx.Connect(context.Background(), dsn)
+func (p *ClientPostgres) DBSelectTracks() {
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
 	defer conn.Close(context.Background())
-	rows, err := conn.Query(context.Background(), "select * from "+cTableNameTrack)
+	rows, err := conn.Query(context.Background(), "select * from "+p.cTableNameTrack)
 	if err != nil {
 		panic(err)
 	}
@@ -210,9 +154,8 @@ func DBSelectTracks() {
 	}
 }
 
-func DBInsertTrack(track TrackDB) {
-	dsn := cDsnL + cDBPassword + cDsnR
-	conn, err := pgx.Connect(context.Background(), dsn)
+func (p *ClientPostgres) DBInsertTrack(track TrackDB) {
+	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
@@ -221,27 +164,19 @@ func DBInsertTrack(track TrackDB) {
 
 	var trackId int
 	queryInsert := fmt.Sprintf("insert into %s (name, urlLastfm, duration, position, artistHash, albumHash) "+
-		"values ($1, $2, $3, $4, $5, $6) returning id;", cTableNameTrack)
+		"values ($1, $2, $3, $4, $5, $6) returning id;", p.cTableNameTrack)
 	err = conn.QueryRow(context.Background(),
 		queryInsert,
 		track.Name, track.UrlLastfm, track.Duration, track.Position, track.ArtistHash, track.AlbumHash).Scan(&trackId)
-	CheckError(err, "Tracks")
+	checkError(err, "Tracks")
 	log.Println("Track with id added :", trackId)
 }
 
-/*
-CREATE TABLE artists_albums
-(
-    id        serial                                             not null unique,
-    artist_id int references artists (id) on delete cascade      not null,
-    album_id  int references albums (id) on delete cascade       not null
-);
-
-
-CREATE TABLE albums_tracks
-(
-    id       serial                                              not null unique,
-    album_id int references albums (id) on delete cascade        not null,
-    track_id int references tracks (id) on delete cascade        not null
-);
-*/
+func checkError(err error, db string) {
+	if err != nil {
+		fmt.Println("Failed connecting to table :", db)
+		log.Fatal(err)
+	} else {
+		fmt.Println("Successfully connected to the table :", db)
+	}
+}

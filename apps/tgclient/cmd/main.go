@@ -34,23 +34,22 @@ func main() {
 	}
 	bot.Debug = true
 
-	chanUpd, err := telegram.InitUpdatesChannel(bot)
-
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 	chanEvent := make(chan kafka.Event)
 
-	tgBot := telegram.NewBot(bot, &logger, pStorage, &chanUpd) // creating custom bot client
-	clKafka := kafka.NewKafka(&chanUpd)                        // creating new kafka client
+	tgBot := telegram.NewBot(bot, &logger, pStorage, chanEvent) // creating custom bot client
 
+	clKafka := kafka.NewKafka()
 	go clKafka.ConsumeEvents(context.Background(), chanEvent, &wg)
-	go func(wg *sync.WaitGroup) {
-		err := tgBot.Start(wg)
+	go tgBot.StartHandlingEventUpdates(&wg)
+	go func(group *sync.WaitGroup) {
+		err := tgBot.StartHandling(group)
 		if err != nil {
 			log.Fatalln("[ERR] Unable to start bot")
+
 		}
 	}(&wg)
-
 	wg.Wait()
 }
 
