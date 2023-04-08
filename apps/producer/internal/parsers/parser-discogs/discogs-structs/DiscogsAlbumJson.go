@@ -2,6 +2,7 @@ package discogs_structs
 
 import (
 	"producer/internal/parsers/interfaces"
+	"producer/internal/utils"
 	"strconv"
 )
 
@@ -111,27 +112,27 @@ type DiscogsAlbumJson struct {
 	BlockedFromSale bool   `json:"blocked_from_sale"`
 }
 
-func (a DiscogsAlbumJson) GetTitle() string {
+func (a *DiscogsAlbumJson) GetTitle() string {
 	return a.Title
 }
 
-func (a DiscogsAlbumJson) GetTracksLen() int {
+func (a *DiscogsAlbumJson) GetTracksLen() int {
 	return len(a.Tracklist)
 }
 
-func (a DiscogsAlbumJson) GetUrl() string {
-	return a.URI
+func (a *DiscogsAlbumJson) GetUrl() string {
+	return utils.DecodeUrl(a.URI)
 }
 
-func (a DiscogsAlbumJson) GetYear() int {
+func (a *DiscogsAlbumJson) GetYear() int {
 	return a.Year
 }
 
-func (a DiscogsAlbumJson) GetImage() string {
+func (a *DiscogsAlbumJson) GetImage() string {
 	return ""
 }
 
-func (a DiscogsAlbumJson) GetTracks() []interfaces.ITrack {
+func (a *DiscogsAlbumJson) GetTracks() []interfaces.ITrack {
 	var tracks []interfaces.ITrack
 	for _, t := range a.Tracklist {
 		tracks = append(tracks, t)
@@ -139,10 +140,10 @@ func (a DiscogsAlbumJson) GetTracks() []interfaces.ITrack {
 	return tracks
 }
 
-func (a DiscogsAlbumJson) GetArtistsId() string {
+func (a *DiscogsAlbumJson) GetArtistsId() string {
 	return strconv.Itoa(a.Artists[0].ID)
 }
 
-func (a DiscogsAlbumJson) GetAlbumId() string {
-	return a.ResourceURL
+func (a *DiscogsAlbumJson) GetAlbumId() string {
+	return utils.DecodeUrl(a.ResourceURL)
 }

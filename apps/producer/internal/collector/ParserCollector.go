@@ -120,8 +120,8 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 			//log.Println("Discogs Master Resourses Url Equals Discgos Release Resources Url : ", v)
 
 			if masterAlbum.Title == r.Title { // checking the albumTmp leads to the same album that was requested from releases list
-				aDb = ParserCollectorAlbum(lastfmAlbum, masterAlbum) // full album thing
-				tDb = ParserCollectorTrack(lastfmAlbum, masterAlbum)
+				aDb = ParserCollectorAlbum(lastfmAlbum, &masterAlbum) // full album thing
+				tDb = ParserCollectorTrack(lastfmAlbum, &masterAlbum)
 				//log.Println("////////////Artist id according to album : ", masterAlbum.GetArtistsId())
 
 			} else {

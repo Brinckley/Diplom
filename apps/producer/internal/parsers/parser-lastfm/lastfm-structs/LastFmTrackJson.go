@@ -1,6 +1,7 @@
 package lastfm_structs
 
 import (
+	"producer/internal/utils"
 	"strconv"
 )
 
@@ -51,7 +52,7 @@ func (l LastFmTrackJson) GetDuration() string {
 }
 
 func (l LastFmTrackJson) GetUrl() string {
-	return l.Url
+	return utils.DecodeUrl(l.Url)
 }
 
 func (l LastFmTrackJson) GetArtistId() string {

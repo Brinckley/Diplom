@@ -2,6 +2,7 @@ package discogs_structs
 
 import (
 	"producer/internal/parsers/interfaces"
+	"producer/internal/utils"
 	"strconv"
 )
 
@@ -112,15 +113,15 @@ type DiscogsMasters struct {
 	DataQuality string `json:"data_quality"`
 }
 
-func (m DiscogsMasters) GetTitle() string {
+func (m *DiscogsMasters) GetTitle() string {
 	return m.Title
 }
 
-func (m DiscogsMasters) GetTracksLen() int {
+func (m *DiscogsMasters) GetTracksLen() int {
 	return len(m.Tracklist)
 }
 
-func (m DiscogsMasters) GetTracks() []interfaces.ITrack {
+func (m *DiscogsMasters) GetTracks() []interfaces.ITrack {
 	var tracks []interfaces.ITrack
 	for _, t := range m.Tracklist {
 		tracks = append(tracks, t)
@@ -128,26 +129,27 @@ func (m DiscogsMasters) GetTracks() []interfaces.ITrack {
 	return tracks
 }
 
-func (m DiscogsMasters) GetUrl() string {
-	return m.URI
+func (m *DiscogsMasters) GetUrl() string {
+	return utils.DecodeUrl(m.URI)
 }
 
-func (m DiscogsMasters) GetYear() int {
+func (m *DiscogsMasters) GetYear() int {
 	return m.Year
 }
 
-func (m DiscogsMasters) GetImage() string {
-	if len(m.Images) != 0 {
-		return m.Images[0].URI
+func (m *DiscogsMasters) GetImage() string {
+	if len(m.Images) >= 2 {
+		return utils.DecodeUrl(m.Images[1].URI)
 	}
 	return ""
 }
 
-func (m DiscogsMasters) GetArtistsId() string {
+func (m *DiscogsMasters) GetArtistsId() string {
 	return strconv.Itoa(m.Artists[0].ID)
 }
 
-func (m DiscogsMasters) GetAlbumId() string {
+func (m *DiscogsMasters) GetAlbumId() string {
 	//TODO implement me
+	//Never used actually
 	panic("implement me")
 }

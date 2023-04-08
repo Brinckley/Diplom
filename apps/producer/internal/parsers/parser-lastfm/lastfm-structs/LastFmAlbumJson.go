@@ -2,6 +2,7 @@ package lastfm_structs
 
 import (
 	"producer/internal/parsers/interfaces"
+	"producer/internal/utils"
 )
 
 type LastFmAlbumJson struct {
@@ -42,7 +43,7 @@ func (a LastFmAlbumJson) GetTracksLen() int {
 }
 
 func (a LastFmAlbumJson) GetUrl() string {
-	return a.Album.Url
+	return utils.DecodeUrl(a.Album.Url)
 }
 
 func (a LastFmAlbumJson) GetYear() int {

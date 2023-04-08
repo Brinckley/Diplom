@@ -1,6 +1,9 @@
 package discogs_structs
 
-import "strconv"
+import (
+	"producer/internal/utils"
+	"strconv"
+)
 
 type DiscogsArtistJson struct {
 	Name        string `json:"name"`
@@ -51,13 +54,13 @@ func (d DiscogsArtistJson) GetOnTour() bool {
 
 func (d DiscogsArtistJson) GetImage() string {
 	if len(d.Images) != 0 {
-		return d.Images[0].URI
+		return utils.DecodeUrl(d.Images[0].URI)
 	}
 	return ""
 }
 
 func (d DiscogsArtistJson) GetUrl() string {
-	return d.URI
+	return utils.DecodeUrl(d.URI)
 }
 
 func (d DiscogsArtistJson) GetId() string {

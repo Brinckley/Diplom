@@ -72,7 +72,7 @@ func (a LastFmArtistJson) GetImage() string {
 }
 
 func (a LastFmArtistJson) GetUrl() string {
-	return a.Artist.Url
+	return utils.DecodeUrl(a.Artist.Url)
 }
 
 func (a LastFmArtistJson) GetId() string {
