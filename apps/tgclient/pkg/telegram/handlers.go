@@ -16,7 +16,8 @@ const (
 	subscribeCmd   = "subscribe"
 	unsubscribeCmd = "unsubscribe"
 
-	debugCmd = "debugSubscriptions"
+	debugListDiscography = "discography"
+	debugCmd             = "debugSubscriptions"
 )
 
 const (
@@ -57,9 +58,23 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
 		return b.handleHelpCmd(message)
 	case debugCmd:
 		return b.handleDebugSubsCmd(message)
+	case debugListDiscography:
+		return b.handleDiscographyDebug(message)
 	default:
 		return b.handleUnknownCmd(message)
 	}
+}
+
+func (b *Bot) handleDiscographyDebug(message *tgbotapi.Message) (int, error) {
+	artistName := "Би-2"
+	albumList, err := b.storage.GetAlbumsByArtist(artistName)
+	if err != nil {
+		return ResFail, err
+	}
+	list := fmt.Sprint(albumList)
+	msg := tgbotapi.NewMessage(message.Chat.ID, list)
+	_, err = b.bot.Send(msg)
+	return ResOk, err
 }
 
 func (b *Bot) handleDebugSubsCmd(message *tgbotapi.Message) (int, error) {

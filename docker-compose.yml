@@ -152,8 +152,8 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_started
- #     init-kafka:
- #       condition: service_healthy
+      init-kafka:
+        condition: service_healthy
     env_file:
       - ./env/checker.env
     networks: [ "go_develop" ]

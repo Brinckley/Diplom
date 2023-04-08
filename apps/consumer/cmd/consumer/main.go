@@ -7,12 +7,15 @@ import (
 	"os"
 )
 
+// https://docs.kudago.com/api/#
+
 func main() {
-	// init environment
+	// init all environment
 	logger := logrus.Logger{Formatter: &logrus.JSONFormatter{}} // creating and initializing the logger
 	logger.SetOutput(os.Stdout)
 
 	postgresClient := postgres.NewPostgres(&logger)
-	kafkaClient := kafka.NewKafka(postgresClient, &logger)
-	kafkaClient.ConsumeAndSend()
+	clientKafka := kafka.NewKafka(postgresClient, &logger)
+
+	clientKafka.ConsumeAndSend()
 }

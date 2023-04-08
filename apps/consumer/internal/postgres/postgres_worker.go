@@ -40,7 +40,17 @@ func (p *ClientPostgres) init() {
 	p.cDsn = p.cDsnL + p.cDBPassword + p.cDsnR
 }
 
+func CheckError(err error, db string) {
+	if err != nil {
+		fmt.Println("Failed connecting to table :", db)
+		log.Fatal(err)
+	} else {
+		fmt.Println("Successfully connected to the table :", db)
+	}
+}
+
 func (p *ClientPostgres) DBSelectArtists() {
+	//log.Println("DSN : ", dsn)
 	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
@@ -81,7 +91,7 @@ func (p *ClientPostgres) DBInsertArtist(artist ArtistDB) {
 		queryInsert,
 		artist.Name, artist.Bio, artist.OnTour, artist.Picture, artist.IdLastfm, artist.IdDiscogs, artist.Genre,
 		artist.UrlLastfm, artist.UrlDiscogs, artist.ArtistHash).Scan(&artistId)
-	checkError(err, "Artists")
+	CheckError(err, "Artists")
 	log.Println("Artist with id added :", artistId)
 }
 
@@ -125,7 +135,7 @@ func (p *ClientPostgres) DBInsertAlbum(album AlbumDB) {
 		queryInsert,
 		album.Name, album.Release, album.UrlLastfm, album.UrlDiscogs, album.Picture,
 		album.TrackCount, album.ArtistHash, album.AlbumHash).Scan(&albumId)
-	checkError(err, "Albums")
+	CheckError(err, "Albums")
 	log.Println("Album with id added :", albumId)
 }
 
@@ -168,15 +178,6 @@ func (p *ClientPostgres) DBInsertTrack(track TrackDB) {
 	err = conn.QueryRow(context.Background(),
 		queryInsert,
 		track.Name, track.UrlLastfm, track.Duration, track.Position, track.ArtistHash, track.AlbumHash).Scan(&trackId)
-	checkError(err, "Tracks")
+	CheckError(err, "Tracks")
 	log.Println("Track with id added :", trackId)
-}
-
-func checkError(err error, db string) {
-	if err != nil {
-		fmt.Println("Failed connecting to table :", db)
-		log.Fatal(err)
-	} else {
-		fmt.Println("Successfully connected to the table :", db)
-	}
 }
