@@ -64,7 +64,7 @@ func (b *Bot) StartHandlingEventUpdates(group *sync.WaitGroup) {
 		case event, ok := <-b.receiverChan:
 			if ok {
 				log.Println("[INFO] event received")
-				subscribers, err := b.storage.GetAllSubscribers(event.Artist)
+				subscribers, err := b.storage.GetAllSubscribers(event)
 				if err != nil {
 					log.Println("[ERR] can't receive event from kafka!")
 					return
@@ -98,7 +98,7 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 		case event, ok := <-b.receiverChan:
 			if ok {
 				log.Println("[INFO] event received")
-				subscribers, err := b.storage.GetAllSubscribers(event.Artist)
+				subscribers, err := b.storage.GetAllSubscribers(event)
 				if err != nil {
 					log.Println("[ERR] can't receive event from kafka!")
 					return

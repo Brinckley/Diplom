@@ -1,6 +1,8 @@
 package kassir_structs
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type EventInfo struct {
 	ID        int    `json:"ID"`
@@ -12,6 +14,7 @@ type EventInfo struct {
 	Place     string `json:"place"`
 	PlaceLink string `json:"placeLink"`
 	Cost      string `json:"cost"`
+	TimeStamp int64  `json:"timeStamp"`
 }
 
 type Events struct {

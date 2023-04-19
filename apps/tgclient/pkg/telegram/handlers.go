@@ -3,7 +3,6 @@ package telegram
 import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"log"
 	"tgclient/pkg/kafka"
 	"tgclient/pkg/storage"
 )
@@ -57,7 +56,8 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
 	case helpCmd:
 		return b.handleHelpCmd(message)
 	case debugCmd:
-		return b.handleDebugSubsCmd(message)
+		//	return b.handleDebugSubsCmd(message)
+		return 0, nil
 	case debugListDiscography:
 		return b.handleDiscographyDebug(message)
 	default:
@@ -77,17 +77,17 @@ func (b *Bot) handleDiscographyDebug(message *tgbotapi.Message) (int, error) {
 	return ResOk, err
 }
 
-func (b *Bot) handleDebugSubsCmd(message *tgbotapi.Message) (int, error) {
-	subscribers, err := b.storage.GetAllSubscribers("Rammstein")
-	if err != nil {
-		return 0, err
-	}
-	log.Println(subscribers)
-	subs := fmt.Sprintf("%s", subscribers)
-	msg := tgbotapi.NewMessage(message.Chat.ID, subs)
-	_, err = b.bot.Send(msg)
-	return ResOk, err
-}
+//func (b *Bot) handleDebugSubsCmd(message *tgbotapi.Message) (int, error) {
+//	subscribers, err := b.storage.GetAllSubscribers("Rammstein")
+//	if err != nil {
+//		return 0, err
+//	}
+//	log.Println(subscribers)
+//	subs := fmt.Sprintf("%s", subscribers)
+//	msg := tgbotapi.NewMessage(message.Chat.ID, subs)
+//	_, err = b.bot.Send(msg)
+//	return ResOk, err
+//}
 
 func (b *Bot) handleStartCmd(message *tgbotapi.Message) (int, error) {
 	err := b.storage.Registration(message)

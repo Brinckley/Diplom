@@ -16,23 +16,26 @@ func main() {
 	// sending ONE artist to parse ALL related events from kassir.ru
 	// sending ALL related events to elastic
 
+	log.Println("----------------------------Temporary check----------------------------")
 	_, err := http.NewRequest("GET", "http://elasticsearch:9200", nil)
-
 	if err != nil {
-		log.Println("!!!!!!!!!!!! Err check : ", err.Error())
+		log.Fatalln("!!!!!!!!!!!! Err check : ", err.Error())
 	} else {
 		log.Println("CHECK PASSED!!!!!!!!")
 	}
+	log.Println("----------------------------End of temporary check----------------------------")
 
 	p := postgres.NewPostgres()
 	p.Init()
-	names, genres, err := p.GetArtistsNamesGenres()
+	names, genres, err := p.GetArtistsNamesGenres() // writing all artists' names into list
 	if err != nil {
-		return
+		log.Fatalln("[ERR] can't get data about artists from postgres : ", err.Error())
 	}
+	log.Println("----------------------------All artists with their genres----------------------------")
 	for i := 0; i < len(names); i++ {
 		fmt.Printf("%s  -  %s\n", names[i], genres[i])
 	}
+	log.Println("----------------------------End of all artists----------------------------")
 
 	esclient := esearch.NewESClient()
 	if err != nil {
@@ -41,7 +44,7 @@ func main() {
 	log.Printf("[CONTENT] Type of client : %T, client value : %v\n", esclient, esclient)
 	esclient.CheckConnection()
 
-	log.Println("------------------- All artist from db have been read -------------------")
+	log.Println("------------------- All artist from db have been read, es connection set -------------------")
 
 	eventsChan := make(chan []kassir_structs.EventInfo, 1)
 	var mutex sync.Mutex
@@ -49,30 +52,29 @@ func main() {
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < cnt; i++ {
-		wg.Add(1)
-		go func(name string, genre string) {
-			html, err := kassir_functions.LookAtSearchHtml(name, genre)
+		wg.Add(1)                            // adding work for each of artists
+		go func(name string, genre string) { // func to get all concerts of one artist in selected genre
+			allEvents, err := kassir_functions.LookAtSearchHtml(name, genre)
 			if err != nil {
-				wg.Done()
+				wg.Done() // nothing to do if error exists, job done
 				return
 			}
-			eventsChan <- html
-		}(names[i], genres[i])
+			eventsChan <- allEvents // sending got events to processing for es
+		}(names[i], genres[i]) // function works for each artist from the list
 	}
-	for i := 0; i < cnt; i++ {
-		go ReceiveFormChan(eventsChan, i, &wg, &mutex, esclient)
+	for i := 0; i < cnt; i++ { // for each artist we have a separate channel
+		go ReceiveFormChan(eventsChan, &wg, &mutex, esclient)
 	}
 	wg.Wait()
 }
 
-func ReceiveFormChan(c chan []kassir_structs.EventInfo, id int, wg *sync.WaitGroup, mutex *sync.Mutex, client *esearch.ESClient) {
-	defer func() {
+func ReceiveFormChan(c chan []kassir_structs.EventInfo, wg *sync.WaitGroup, mutex *sync.Mutex, client *esearch.ESClient) {
+	defer func() { // ending mutex usage to unlock es, finishing the work
 		mutex.Unlock()
 		wg.Done()
 	}()
 	mutex.Lock()
-	client.AddDocument(id, <-c)
-}
+	// sending all events related to one artist to the es for adding
+	client.AddDocument(<-c) // id is an inner field that basically is not needed, but let it be
 
-// еще один топик для выхода
-// чеккер прозванивает, через кафку отправляет
+}

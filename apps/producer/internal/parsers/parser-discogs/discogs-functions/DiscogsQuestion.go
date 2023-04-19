@@ -57,10 +57,11 @@ type DiscogsSearchStruct struct {
 
 func CreateRequestByName(ObjName, Type string) int {
 	// https://api.discogs.com/database/search?q=Nirvana&token=abcxyz123456
+	ObjName = strings.Replace(ObjName, " ", "-", -1)
 	searchUrl := GetSearch()
 	API := getAPI()
 	fullUrl := searchUrl[0] + searchUrl[1] + ObjName + searchUrl[2] + API
-	log.Println("Searched url :", fullUrl)
+	log.Println("[INFO] discogs searched url :", fullUrl)
 
 	var client http.Client
 	resp, err := client.Get(fullUrl)
@@ -76,7 +77,10 @@ func CreateRequestByName(ObjName, Type string) int {
 		}
 
 		var answer DiscogsSearchStruct
-		json.Unmarshal(bodyBytes, &answer)
+		err = json.Unmarshal(bodyBytes, &answer)
+		if err != nil {
+			return -1
+		}
 
 		for _, elem := range answer.Results {
 			if strings.Compare(elem.Type, Type) == 0 {

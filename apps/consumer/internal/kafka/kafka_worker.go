@@ -4,7 +4,6 @@ import (
 	"consumer/internal/postgres"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -18,6 +17,10 @@ type ClientKafka struct {
 	cArtistTopic   string
 	cAlbumTopic    string
 	cTrackTopic    string
+
+	cgArtist string
+	cgAlbum  string
+	cgTrack  string
 
 	logger         *logrus.Logger
 	postgresClient *postgres.ClientPostgres
@@ -37,6 +40,9 @@ func (k *ClientKafka) init() {
 	k.cArtistTopic = os.Getenv("ARTIST_TOPIC_NAME")
 	k.cAlbumTopic = os.Getenv("ALBUM_TOPIC_NAME")
 	k.cTrackTopic = os.Getenv("TRACK_TOPIC_NAME")
+	k.cgArtist = os.Getenv("ARTIST_CONSUMER_GROUP")
+	k.cgAlbum = os.Getenv("ALBUM_CONSUMER_GROUP")
+	k.cgTrack = os.Getenv("TRACK_CONSUMER_GROUP")
 }
 
 func (k *ClientKafka) ConsumeAndSend() {
@@ -45,7 +51,7 @@ func (k *ClientKafka) ConsumeAndSend() {
 	go k.consumeAlbum(topicChan)
 	go k.consumeTrack(topicChan)
 
-	timeout := time.After(30 * time.Second)
+	timeout := time.After(70 * time.Second)
 	for i := 0; i < 3; i++ {
 		select {
 		case tc := <-topicChan:
@@ -61,18 +67,23 @@ func (k *ClientKafka) ConsumeAndSend() {
 
 func (k *ClientKafka) consumeArtist(tcs chan string) {
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{k.cBrokerAddress},
-		Topic:    k.cArtistTopic,
+		Brokers: []string{k.cBrokerAddress},
+		Topic:   k.cArtistTopic,
+
 		MinBytes: 10e3, // 10KB
 		MaxBytes: 10e6, // 10MB
 	})
+	log.Printf("Setting up a new reader.  Basic offset : %v, Topic : %s, GroupId : %s\n",
+		r.Offset(), r.Stats().Topic, r.Config().GroupID)
 
 	for {
+		//log.Printf("[INFO] new reader iterration. Basic offset : %v, Topic : %s, GroupId : %s\n",
+		//	r.Offset(), r.Stats().Topic, r.Config().GroupID)
 		m, err := r.ReadMessage(context.Background())
 		if err != nil {
 			break
 		}
-		fmt.Printf("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
+		//fmt.Printf("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
 
 		var artist postgres.ArtistDB
 		err = json.Unmarshal(m.Value, &artist)
@@ -94,16 +105,19 @@ func (k *ClientKafka) consumeAlbum(tcs chan string) {
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{k.cBrokerAddress},
 		Topic:    k.cAlbumTopic,
+
 		MinBytes: 10e3, // 10KB
 		MaxBytes: 10e6, // 10MB
 	})
+	log.Printf("Setting up a new reader.  Basic offset : %v, Topic : %s, GroupId : %s\n",
+		r.Offset(), r.Stats().Topic, r.Config().GroupID)
 
 	for {
 		m, err := r.ReadMessage(context.Background())
 		if err != nil {
 			break
 		}
-		fmt.Printf("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
+		//fmt.Printf("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
 
 		var album postgres.AlbumDB
 		err = json.Unmarshal(m.Value, &album)
@@ -125,16 +139,19 @@ func (k *ClientKafka) consumeTrack(tcs chan string) {
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{k.cBrokerAddress},
 		Topic:    k.cTrackTopic,
+
 		MinBytes: 10e3, // 10KB
 		MaxBytes: 10e6, // 10MB
 	})
+	log.Printf("Setting up a new reader.  Basic offset : %v, Topic : %s, GroupId : %s\n",
+		r.Offset(), r.Stats().Topic, r.Config().GroupID)
 
 	for {
 		m, err := r.ReadMessage(context.Background())
 		if err != nil {
 			break
 		}
-		fmt.Printf("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
+		//fmt.Printf("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
 
 		var track postgres.TrackDB
 		err = json.Unmarshal(m.Value, &track)

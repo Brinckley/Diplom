@@ -3,6 +3,7 @@ package utils
 import (
 	"log"
 	"net/url"
+	"strings"
 )
 
 func DecodeUrl(oldUrl string) string {
@@ -11,5 +12,6 @@ func DecodeUrl(oldUrl string) string {
 		log.Printf("[ERR] can't decode the url : %s, The URL is : '%s'", err.Error(), oldUrl)
 		return ""
 	}
+	strings.Replace(decodedValue, " ", "%20", -1)
 	return decodedValue
 }

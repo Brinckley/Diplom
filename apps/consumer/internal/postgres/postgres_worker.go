@@ -45,7 +45,7 @@ func CheckError(err error, db string) {
 		fmt.Println("Failed connecting to table :", db)
 		log.Fatal(err)
 	} else {
-		fmt.Println("Successfully connected to the table :", db)
+		//fmt.Println("Successfully connected to the table :", db)
 	}
 }
 
@@ -79,10 +79,9 @@ func (p *ClientPostgres) DBSelectArtists() {
 func (p *ClientPostgres) DBInsertArtist(artist ArtistDB) {
 	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("[ERR] unable to connect to database: %v\n", err)
 	}
-	defer conn.Close(context.Background())
+	defer func() { _ = conn.Close(context.Background()) }()
 
 	var artistId int
 	queryInsert := fmt.Sprintf("insert into %s (name, bio, onTour, picture, idLastfm, idDiscogs, genre, urlLastfm, urlDiscogs, artistHash) "+
@@ -92,16 +91,16 @@ func (p *ClientPostgres) DBInsertArtist(artist ArtistDB) {
 		artist.Name, artist.Bio, artist.OnTour, artist.Picture, artist.IdLastfm, artist.IdDiscogs, artist.Genre,
 		artist.UrlLastfm, artist.UrlDiscogs, artist.ArtistHash).Scan(&artistId)
 	CheckError(err, "Artists")
-	log.Println("Artist with id added :", artistId)
+	//log.Println("[POSTGRESQL] artist with id added :", artistId)
 }
 
 func (p *ClientPostgres) DBSelectAlbums() {
 	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("[ERR] unable to connect to database: %v\n", err)
 	}
-	defer conn.Close(context.Background())
+	defer func() { _ = conn.Close(context.Background()) }()
+
 	rows, err := conn.Query(context.Background(), "select * from "+p.cTableNameAlbum)
 	if err != nil {
 		panic(err)
@@ -123,10 +122,9 @@ func (p *ClientPostgres) DBSelectAlbums() {
 func (p *ClientPostgres) DBInsertAlbum(album AlbumDB) {
 	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("[ERR] unable to connect to database: %v\n", err)
 	}
-	defer conn.Close(context.Background())
+	defer func() { _ = conn.Close(context.Background()) }()
 
 	var albumId int
 	queryInsert := fmt.Sprintf("insert into %s (name, release, urlLastfm, urlDiscogs, picture, trackCount, artistHash, albumHash) "+
@@ -136,16 +134,16 @@ func (p *ClientPostgres) DBInsertAlbum(album AlbumDB) {
 		album.Name, album.Release, album.UrlLastfm, album.UrlDiscogs, album.Picture,
 		album.TrackCount, album.ArtistHash, album.AlbumHash).Scan(&albumId)
 	CheckError(err, "Albums")
-	log.Println("Album with id added :", albumId)
+	//log.Println("[POSTGRESQL] album with id added :", albumId)
 }
 
 func (p *ClientPostgres) DBSelectTracks() {
 	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("[ERR] unable to connect to database: %v\n", err)
 	}
-	defer conn.Close(context.Background())
+	defer func() { _ = conn.Close(context.Background()) }()
+
 	rows, err := conn.Query(context.Background(), "select * from "+p.cTableNameTrack)
 	if err != nil {
 		panic(err)
@@ -167,10 +165,9 @@ func (p *ClientPostgres) DBSelectTracks() {
 func (p *ClientPostgres) DBInsertTrack(track TrackDB) {
 	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("[ERR] unable to connect to database: %v\n", err)
 	}
-	defer conn.Close(context.Background())
+	defer func() { _ = conn.Close(context.Background()) }()
 
 	var trackId int
 	queryInsert := fmt.Sprintf("insert into %s (name, urlLastfm, duration, position, artistHash, albumHash) "+
@@ -179,5 +176,5 @@ func (p *ClientPostgres) DBInsertTrack(track TrackDB) {
 		queryInsert,
 		track.Name, track.UrlLastfm, track.Duration, track.Position, track.ArtistHash, track.AlbumHash).Scan(&trackId)
 	CheckError(err, "Tracks")
-	log.Println("Track with id added :", trackId)
+	//log.Println("[POSTGRESQL] track with id added :", trackId)
 }

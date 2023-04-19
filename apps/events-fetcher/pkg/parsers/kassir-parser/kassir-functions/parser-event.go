@@ -2,52 +2,56 @@ package kassir_functions
 
 import (
 	"errors"
-	structs2 "events-fetcher/pkg/parsers/kassir-parser/kassir-structs"
+	kstructs "events-fetcher/pkg/parsers/kassir-parser/kassir-structs"
 	"fmt"
 	"github.com/anaskhan96/soup"
 	"log"
 	"strings"
+	"time"
 )
 
-func LookAtSearchHtml(artistName, genre string) ([]structs2.EventInfo, error) {
-	artistName = strings.Replace(artistName, " ", "%20", -1)
-	category, err := structs2.SelectGenre(genre)
+func LookAtSearchHtml(artistNameRaw, genre string) ([]kstructs.EventInfo, error) {
+	artistName := strings.Replace(artistNameRaw, " ", "%20", -1) // removing spaces
+	category, err := kstructs.SelectGenre(genre)
 	if err != nil {
-		return []structs2.EventInfo{}, err
+		return []kstructs.EventInfo{}, err
 	}
 
-	genreCategory := "&" + category
+	genreCategory := "&" + category // adding category parameter to the url
 	fullUrl := fmt.Sprintf("https://msk.kassir.ru/category?main=3000%s&sort=1&c=90&keyword=%s", genreCategory, artistName)
-	log.Println("Full Search Url : ", fullUrl)
+	//log.Println("Full Search Url : ", fullUrl)
 
 	doc, err := getHTMLFromLink(fullUrl)
 	if err != nil {
 		log.Println("no such url")
-		return []structs2.EventInfo{}, err
+		return []kstructs.EventInfo{}, err
 	}
 
 	docc := doc.
 		Find("div", "class", "tiles-container")
 	if docc.Error != nil {
-		log.Println("no info found")
-		return []structs2.EventInfo{}, err
+		log.Printf("[ERR] no info found about artist '%s' with genre '%s'\n", artistNameRaw, genre)
+		return []kstructs.EventInfo{}, err
 	}
 
 	commonPath := docc.FindAll("div", "class", "new--w-12")
-	if len(commonPath) == 0 {
-		return []structs2.EventInfo{}, errors.New("no info found")
+	if len(commonPath) == 0 { // no concerts at all option
+		return []kstructs.EventInfo{}, errors.New(fmt.Sprintf("[ERR] no info found about artist '%s' with genre '%s'\n", artistNameRaw, genre))
 	}
 
-	var events []structs2.EventInfo
+	//log.Printf("[INFO] starting parsing events for artist '%s'\n", artistNameRaw)
+	var events []kstructs.EventInfo
+
 	for _, p := range commonPath {
+		//log.Println("----------------------------------------------111 !1111-----------", p.HTML())
 		innerPath := p.
-			Find("div", "class", "event-card__caption")
+			Find("div", "class", "tile-card")
 		if innerPath.Error != nil {
 			log.Println("No inner info found!")
 			continue
 		}
-		ei := structs2.EventInfo{
-			Artist:    artistName,
+		ei := kstructs.EventInfo{ // constructing event object from found data using direct html searchers
+			Artist:    artistNameRaw,
 			Title:     fetchTitle(innerPath),
 			TitleLink: fetchTitleLink(innerPath),
 			Date:      fetchDate(innerPath),
@@ -55,10 +59,12 @@ func LookAtSearchHtml(artistName, genre string) ([]structs2.EventInfo, error) {
 			Place:     fetchPlace(innerPath),
 			PlaceLink: fetchPlaceLink(innerPath),
 			Cost:      fetchCost(innerPath),
+			TimeStamp: time.Now().Unix(),
 		}
+		//log.Println("EVENT CONTENT : ", ei)
 		events = append(events, ei)
 	}
-	log.Printf("Artist '%s' data : %s", artistName, events)
+	//log.Printf("[INFO] end of parsing events for artist '%s'\n", artistNameRaw)
 	return events, nil
 }
 
@@ -68,5 +74,5 @@ func getHTMLFromLink(fullUrl string) (soup.Root, error) {
 		return soup.Root{}, err
 	}
 	doc := soup.HTMLParse(resp)
-	return doc, nil
+	return doc, nil // returning all html code from the page
 }

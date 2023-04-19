@@ -11,6 +11,7 @@ type Event struct {
 	Place     string `json:"place"`
 	PlaceLink string `json:"placeLink"`
 	Cost      string `json:"cost"`
+	TimeStamp int64  `json:"timeStamp"`
 }
 
 func (e *Event) CreateNotification() string {

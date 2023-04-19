@@ -38,7 +38,9 @@ func (c *ESClient) init() error {
 }
 
 func (c *ESClient) SearchArtist(artistName string) ([]ElasticDocs, error) {
+	log.Println("-----------------Searching for name : ", artistName)
 	res, err := c.client.Search().
+		Size(1000).
 		Index("artist_events").
 		Request(&search.Request{
 			Query: &types.Query{
@@ -47,7 +49,6 @@ func (c *ESClient) SearchArtist(artistName string) ([]ElasticDocs, error) {
 				},
 			},
 		}).Do(context.Background())
-
 	if err != nil {
 		return nil, fmt.Errorf("can't search for artist with name : %s, error : %s", artistName, err.Error())
 	}
@@ -63,8 +64,8 @@ func (c *ESClient) SearchArtist(artistName string) ([]ElasticDocs, error) {
 	}
 
 	var artists []ElasticDocs
-	for _, h := range hits.Hits.Hits {
-		log.Println("Hits : ", h)
+	for i, h := range hits.Hits.Hits {
+		log.Printf("Hit %v : %v\n", i, h)
 		artists = append(artists, h.Source)
 	}
 

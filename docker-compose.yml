@@ -31,8 +31,14 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1'
       KAFKA_MIN_INSYNC_REPLICAS: '1'
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --topic Artist --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Album --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Track --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Event --describe"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
     networks: [ "go_develop" ]
 
   init-kafka:
@@ -53,11 +59,6 @@ services:
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server kafka:29092 --list
       "
-    healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --topic Artist --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Album --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Track --describe", "kafka-topics --bootstrap-server kafka:29092 --topic Event --describe"]
-      interval: 2s
-      timeout: 2s
-      retries: 15
     networks: [ "go_develop" ]
 
   db:
@@ -84,7 +85,7 @@ services:
     build: 
       context: ./apps/producer
     depends_on:
-      init-kafka:
+      kafka:
         condition: service_healthy
     env_file:
       - ./env/producer.env
@@ -96,7 +97,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      init-kafka:
+      kafka:
         condition: service_healthy
     env_file:
       - ./env/consumer.env
@@ -152,7 +153,7 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_started
-      init-kafka:
+      kafka:
         condition: service_healthy
     env_file:
       - ./env/checker.env

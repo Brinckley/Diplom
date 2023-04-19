@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS user_artist ( -- favourite artists storage --
     id         SERIAL PRIMARY KEY,
     user_id    INTEGER NOT NULL REFERENCES users,
     artist_id  INTEGER NOT NULL REFERENCES artists,
-    lastUpdate TIMESTAMP,
+    updTime    BIGINT NOT NULL,
     UNIQUE (user_id, artist_id)
 );
 

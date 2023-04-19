@@ -55,7 +55,7 @@ func ReadArtist(ArtistName string) lastfm_structs2.LastFmArtistJson {
 	fullUrl := getURLMain() + getURLMethod() + getMethodArtistGetInfo() +
 		getURLApi() + getApi() + getURLArtist() + ArtistName + getURLFormat()
 	fullUrl = strings.Replace(fullUrl, " ", "+", -1)
-	log.Println(fullUrl)
+	log.Printf("[INFO] lastfm full artist url : '%s'\n", fullUrl)
 	data := getByteArrayByURL(fullUrl)
 	var artist lastfm_structs2.LastFmArtistJson
 	err := json.Unmarshal(data, &artist)
@@ -71,7 +71,7 @@ func ReadAlbum(ArtistName, AlbumName string) lastfm_structs2.LastFmAlbumJson {
 	fullUrl := getURLMain() + getURLMethod() + getMethodAlbumGetInfo() +
 		getURLApi() + getApi() + getURLArtist() + ArtistName + getURLAlbum() + AlbumName + getURLFormat()
 	fullUrl = strings.Replace(fullUrl, " ", "+", -1)
-	log.Println(fullUrl)
+	//log.Println(fullUrl)
 	data := getByteArrayByURL(fullUrl)
 	var artist lastfm_structs2.LastFmArtistJson
 	err := json.Unmarshal(data, &artist)
@@ -93,7 +93,7 @@ func ReadTrack(ArtistName, TrackName string) lastfm_structs2.LastFmTrackJson {
 	fullUrl := getURLMain() + getURLMethod() + getMethodTrackGetInfo() +
 		getURLApi() + getApi() + getURLArtist() + ArtistName + getURLTrack() + TrackName + getURLFormat()
 	fullUrl = strings.Replace(fullUrl, " ", "+", -1)
-	log.Println(fullUrl)
+	//log.Println(fullUrl)
 	data := getByteArrayByURL(fullUrl)
 	var artist lastfm_structs2.LastFmArtistJson
 	json.Unmarshal(data, &artist)

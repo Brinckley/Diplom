@@ -41,8 +41,8 @@ func ParserCollectorTrack(lastfmAlbum, discogsAlbum interfaces.IAlbum) [][]byte 
 		//	log.Printf("---%v. Original value : %v", i+1, albumTracks[i])
 
 		trackTmp := TrackDBBuilder(albumTracks[i], discogsAlbum)
-		log.Println("--Artist id according to track :", trackTmp.ArtistHash)
-		log.Println("---Album id according to track :", trackTmp.AlbumHash)
+		//log.Println("--Artist id according to track :", trackTmp.ArtistHash)
+		//log.Println("---Album id according to track :", trackTmp.AlbumHash)
 		//	log.Printf("Type : %T", trackTmp)
 
 		//log.Printf("---%v. Final track ArtistHash : %v\n", i+1, trackTmp.ArtistHash)
@@ -66,6 +66,9 @@ func CheckErrorParser(err error, message string) {
 }
 
 func ParserCollectorArtistWithReleases(ArtistName string) {
+	time.Sleep(70 * time.Second)
+
+	log.Printf("[INFO] Starting work with artist %s\n", ArtistName)
 	// lastfm Artist data got
 	lastfmArtist := parser_lastfm.ReadArtist(ArtistName) // artist of lastfm in struct
 
@@ -78,6 +81,7 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 		log.Println("No such artist as : ", ArtistName)
 		return
 	}
+
 	// all pages from artistId from discogs got
 	// we will iterate over these pages, searching for releases which are marked by tag "master" - this tag is a sign that
 	// this release is a originally created album, not a custom compilation etc
@@ -98,18 +102,18 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 			// fixing it by another function, that builds AlbumDB from discogs.releases + lastfm.album
 
 			//log.Printf("\n%v. ID %v, Title : %v, Type : %v\n", i+1, r.ID, r.Title, r.Type) // writing info into log
-			log.Printf("Url for release : %s\n", r.ResourceURL)
+			//log.Printf("Url for release : %s\n", r.ResourceURL)
 
 			var masterAlbum discogs_structs2.DiscogsMasters
 			err := json.Unmarshal(discogsAlbumData, &masterAlbum) // unmarshalling data got by albumId
 			if err != nil {
-				log.Println("Error unmarshalling data of album by number of : ", albumsNum+1)
+				log.Println("[ERR] unmarshalling data of album by number of : ", albumsNum+1)
 				continue
 			}
 			lastfmAlbum := parser_lastfm.ReadAlbum(ArtistName, r.Title)
 
 			if lastfmAlbum.GetTitle() == "" {
-				log.Println("Album does not exist in lastfm")
+				log.Printf("[INFO] album '%s' does not exist in lastfm\n", r.Title)
 				continue
 			}
 
@@ -153,8 +157,8 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 			}
 			for i := 0; i < len(tDb); i++ {
 				select {
-				case c := <-chanTopic:
-					log.Printf("Value sent to kafka topic : %v\n", c)
+				case _ = <-chanTopic:
+					//log.Printf("Value sent to kafka topic : %v\n", c)
 				case <-timeout:
 					log.Println("Error sending value to kafka topic (timeout)!")
 				}
@@ -170,5 +174,4 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 	}
 	dataArtist = bytes.Trim(dataArtist, "\x00")
 	kafka_producer.Produce("Artist", dataArtist, nil)
-	time.Sleep(60 * time.Second)
 }

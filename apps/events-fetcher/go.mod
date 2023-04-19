@@ -4,12 +4,12 @@ go 1.19
 
 require (
 	github.com/anaskhan96/soup v1.2.5
+	github.com/elastic/go-elasticsearch/v8 v8.7.0
 	github.com/jackc/pgx/v5 v5.3.0
 )
 
 require (
-	github.com/elastic/elastic-transport-go/v8 v8.0.0-20211216131617-bbee439d559c // indirect
-	github.com/elastic/go-elasticsearch/v8 v8.6.0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.2.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	golang.org/x/crypto v0.6.0 // indirect

@@ -11,7 +11,7 @@ func main() {
 	consulDebug := false
 
 	if !consulDebug {
-		artists := []string{"Мельница", "Филипп+Киркоров", "Би-2", "Rammstein", "Nazareth"}
+		artists := []string{"Мельница", "Би-2", "Rammstein"}
 		for _, a := range artists {
 			collector.ParserCollectorArtistWithReleases(a)
 		}

@@ -15,6 +15,7 @@ type ElasticDocs struct {
 	Place     string `json:"place"`
 	PlaceLink string `json:"placeLink"`
 	Cost      string `json:"cost"`
+	TimeStamp int64  `json:"timeStamp"`
 }
 
 type SpecialHits struct {
