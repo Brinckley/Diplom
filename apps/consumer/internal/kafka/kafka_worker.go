@@ -67,9 +67,9 @@ func (k *ClientKafka) ConsumeAndSend() {
 
 func (k *ClientKafka) consumeArtist(tcs chan string) {
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{k.cBrokerAddress},
-		Topic:   k.cArtistTopic,
-
+		Brokers:  []string{k.cBrokerAddress},
+		Topic:    k.cArtistTopic,
+		GroupID:  "artist-gr",
 		MinBytes: 10e3, // 10KB
 		MaxBytes: 10e6, // 10MB
 	})
@@ -92,7 +92,7 @@ func (k *ClientKafka) consumeArtist(tcs chan string) {
 			artist = postgres.ArtistDB{}
 		}
 		log.Println("Appended data of artist :", artist.Name)
-		k.postgresClient.DBInsertArtist(artist) // adding value to postgres
+		//k.postgresClient.DBInsertArtist(artist) // adding value to postgres
 	}
 	if err := r.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)
@@ -105,7 +105,7 @@ func (k *ClientKafka) consumeAlbum(tcs chan string) {
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{k.cBrokerAddress},
 		Topic:    k.cAlbumTopic,
-
+		GroupID:  "album-gr",
 		MinBytes: 10e3, // 10KB
 		MaxBytes: 10e6, // 10MB
 	})
@@ -126,7 +126,7 @@ func (k *ClientKafka) consumeAlbum(tcs chan string) {
 			album = postgres.AlbumDB{}
 		}
 		log.Println("Appended data of album :", album.Name)
-		k.postgresClient.DBInsertAlbum(album)
+		//k.postgresClient.DBInsertAlbum(album)
 	}
 	if err := r.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)
@@ -139,7 +139,7 @@ func (k *ClientKafka) consumeTrack(tcs chan string) {
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{k.cBrokerAddress},
 		Topic:    k.cTrackTopic,
-
+		GroupID:  "track-gr",
 		MinBytes: 10e3, // 10KB
 		MaxBytes: 10e6, // 10MB
 	})
@@ -160,7 +160,7 @@ func (k *ClientKafka) consumeTrack(tcs chan string) {
 			track = postgres.TrackDB{}
 		}
 		log.Println("Appended data of track :", track.Name)
-		k.postgresClient.DBInsertTrack(track)
+		//k.postgresClient.DBInsertTrack(track)
 	}
 	if err := r.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)
