@@ -2,8 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"log"
-	"net/http"
+	"tgclient/pkg/utils"
 )
 
 type ArtistDB struct {
@@ -36,20 +35,17 @@ type AlbumDB struct {
 }
 
 func (a *AlbumDB) ToString() string {
-	resp, err := http.Get(a.UrlLastfm)
-	if err != nil {
-		log.Fatalf("http.Get => %v", err.Error())
-	}
-	a.UrlLastfm = resp.Request.URL.String()
-	fmt.Println(resp.Request.URL.String())
+	a.UrlLastfm = utils.DecodeUrl(a.UrlLastfm)
+	a.UrlDiscogs = utils.DecodeUrl(a.UrlDiscogs)
 
 	return fmt.Sprintf(
-		//"%v. '%s', %s. %v tracks.\n"+
-		//"Discogs : %s\n"+
-		"LastFm : %s\n",
-		//a.Id, a.Name, a.Release, a.TrackCount,
-		//	a.UrlDiscogs,
-		a.UrlLastfm)
+		"'%s', %s. %v tracks.",
+		//	"Discogs : %s\n"+
+		//	"LastFm : %s\n",
+		a.Name, a.Release, a.TrackCount,
+		//a.UrlDiscogs,
+		//a.UrlLastfm
+	)
 }
 
 type TrackDB struct {

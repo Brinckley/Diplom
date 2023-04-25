@@ -11,12 +11,12 @@ const (
 	startCmd       = "start"
 	helpCmd        = "help"
 	artistsCmd     = "artists"
+	albumsCmd      = "albums"
 	favoritesCmd   = "favorites"
 	subscribeCmd   = "subscribe"
 	unsubscribeCmd = "unsubscribe"
-
-	debugListDiscography = "discography"
-	debugCmd             = "debugSubscriptions"
+	discographyCmd = "discography"
+	catalogCmd     = "catalog"
 )
 
 const (
@@ -39,8 +39,6 @@ func (b *Bot) handleRandomMessage(message *tgbotapi.Message, n *int) error {
 }
 
 func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
-	// THINK : return flag of waiting for new msg?
-	b.logger.Printf("[%s] : '%s'", message.From.UserName, message.Text)
 
 	switch message.Command() {
 	case startCmd:
@@ -55,11 +53,8 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
 		return b.handleUnsubscriptionIntro(message)
 	case helpCmd:
 		return b.handleHelpCmd(message)
-	case debugCmd:
-		//	return b.handleDebugSubsCmd(message)
-		return 0, nil
-	case debugListDiscography:
-		return b.handleDiscographyDebug(message)
+	case discographyCmd:
+		return b.handleDiscography(message)
 	default:
 		return b.handleUnknownCmd(message)
 	}
@@ -71,23 +66,18 @@ func (b *Bot) handleDiscographyDebug(message *tgbotapi.Message) (int, error) {
 	if err != nil {
 		return ResFail, err
 	}
-	list := fmt.Sprint(albumList)
+	list := fmt.Sprintf("Полная дискография артиста %s:\n%v", artistName, albumList)
 	msg := tgbotapi.NewMessage(message.Chat.ID, list)
 	_, err = b.bot.Send(msg)
 	return ResOk, err
 }
 
-//func (b *Bot) handleDebugSubsCmd(message *tgbotapi.Message) (int, error) {
-//	subscribers, err := b.storage.GetAllSubscribers("Rammstein")
-//	if err != nil {
-//		return 0, err
-//	}
-//	log.Println(subscribers)
-//	subs := fmt.Sprintf("%s", subscribers)
-//	msg := tgbotapi.NewMessage(message.Chat.ID, subs)
-//	_, err = b.bot.Send(msg)
-//	return ResOk, err
-//}
+func (b *Bot) handleDiscography(message *tgbotapi.Message) (int, error) {
+	msg := tgbotapi.NewMessage(message.Chat.ID, "Check the menu")
+	msg.ReplyMarkup = b.keyboard
+	_, err := b.bot.Send(msg)
+	return ResOk, err
+}
 
 func (b *Bot) handleStartCmd(message *tgbotapi.Message) (int, error) {
 	err := b.storage.Registration(message)
