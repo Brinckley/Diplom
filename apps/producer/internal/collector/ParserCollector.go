@@ -158,7 +158,7 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 			for i := 0; i < len(tDb); i++ {
 				select {
 				case _ = <-chanTopic:
-					//log.Printf("Value sent to kafka topic : %v\n", c)
+					log.Printf("Value sent to kafka topic : \n")
 				case <-timeout:
 					log.Println("Error sending value to kafka topic (timeout)!")
 				}

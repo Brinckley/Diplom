@@ -15,7 +15,7 @@ func main() {
 
 	//postgresClient := postgres.NewPostgres(&logger)
 	//clientKafka := kafka.NewKafka(postgresClient, &logger)
-	clientKafka := kafka.NewKafka(nil, &logger)
+	clientKafka := kafka.NewKafka(nil, &logger) // postgres taken away for debug
 
 	clientKafka.ConsumeAndSend()
 }

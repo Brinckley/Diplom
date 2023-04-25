@@ -10,6 +10,7 @@ import (
 	"sync"
 	"tgclient/pkg/kafka"
 	"tgclient/pkg/storage"
+	"tgclient/pkg/utils"
 	"time"
 )
 
@@ -19,7 +20,8 @@ type Bot struct {
 	storage      *storage.TgPostgres
 	receiverChan chan kafka.Event
 
-	updates tgbotapi.UpdatesChannel
+	updates  tgbotapi.UpdatesChannel
+	keyboard tgbotapi.InlineKeyboardMarkup
 }
 
 func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc chan kafka.Event) *Bot {
@@ -39,6 +41,25 @@ func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPost
 func (b *Bot) initUpdatesChannel() error {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 10
+
+	b.keyboard = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Artists", "/artists"),
+			tgbotapi.NewInlineKeyboardButtonData("Albums", "/albums"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Subscribe", "/subscribe"),
+			tgbotapi.NewInlineKeyboardButtonData("Unsubscribe", "/unsubscribe"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Help", "/help"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("Discogs", "https://www.discogs.com/"),
+			tgbotapi.NewInlineKeyboardButtonURL("Last.fm", "https://www.last.fm/ru/"),
+			tgbotapi.NewInlineKeyboardButtonURL("Kassir.ru", "https://www.kassir.ru/"),
+		),
+	)
 
 	var err error
 	b.updates, err = b.bot.GetUpdatesChan(u)
@@ -103,10 +124,8 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 					log.Println("[ERR] can't receive event from kafka!")
 					return
 				}
-
 				log.Println("[INFO] starting iteration over list of subscribers...")
 				log.Println("[INFO] all list of subs : ", subscribers)
-
 				for _, sub := range subscribers {
 					log.Printf("[INFO STEP] int64 val : %v\n", sub)
 					_, err := b.handleNewEventReceived(sub, event)
@@ -133,26 +152,50 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 			continue
 		}
 
-		if update.Message.IsCommand() {
-			prev = update.Message.Text
-			cmdRes, err := b.handleCommand(update.Message)
-			if err != nil {
-				b.logger.Printf("[ERR] Can't handle command '%s', err : %s", update.Message.Text, err.Error())
+		if update.Message != nil {
+			if update.Message.IsCommand() {
+				prev = update.Message.Text
+				cmdRes, err := b.handleCommand(update.Message)
+				if err != nil {
+					b.logger.Printf("[ERR] Can't handle command '%s', err : %s", update.Message.Text, err.Error())
+					continue
+				}
+				b.logger.Printf("After handling command '%s' got result : %s", update.Message.Text, strconv.Itoa(cmdRes))
 				continue
+			} else {
+				err := b.handleRandomMessage(update.Message, &counter)
+				if counter == 0 {
+					counter = rand.Intn(10) + 4
+				}
+				if err != nil {
+					b.logger.Printf("[ERR] Can't handle message '%s', err : %s", update.Message.Text, err.Error())
+				}
 			}
-			b.logger.Printf("After handling command '%s' got result : %s", update.Message.Text, strconv.Itoa(cmdRes))
+		} else if update.CallbackQuery != nil {
+			m, err := b.callbackHandler(&update)
+			if err != nil {
+				log.Println(err.Error())
+			}
+			prev = "/" + m
 			continue
-		}
-
-		err := b.handleRandomMessage(update.Message, &counter)
-		if counter == 0 {
-			counter = rand.Intn(10) + 4
-		}
-		if err != nil {
-			b.logger.Printf("[ERR] Can't handle message '%s', err : %s", update.Message.Text, err.Error())
 		}
 	}
 	time.Sleep(5 * time.Second)
+}
+
+func (b *Bot) callbackHandler(update *tgbotapi.Update) (string, error) {
+	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+	if _, err := b.bot.AnswerCallbackQuery(callback); err != nil {
+		return "", fmt.Errorf("[ERR] unable to create callback query : %s", err.Error())
+	}
+
+	m := utils.CallbackToMsg(update.CallbackQuery)
+	_, err := b.handleCommand(&m)
+	if err != nil {
+		return "", fmt.Errorf("[ERR] with handling callback : %s", err.Error())
+	}
+
+	return m.Command(), nil
 }
 
 func (b *Bot) waitForAdd(update tgbotapi.Update) bool {
