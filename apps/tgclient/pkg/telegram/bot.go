@@ -20,8 +20,10 @@ type Bot struct {
 	storage      *storage.TgPostgres
 	receiverChan chan kafka.Event
 
-	updates  tgbotapi.UpdatesChannel
-	keyboard tgbotapi.InlineKeyboardMarkup
+	updates tgbotapi.UpdatesChannel
+
+	menuKeyboard    tgbotapi.InlineKeyboardMarkup
+	artistsKeyboard tgbotapi.InlineKeyboardMarkup
 }
 
 func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc chan kafka.Event) *Bot {
@@ -38,11 +40,8 @@ func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPost
 	return b
 }
 
-func (b *Bot) initUpdatesChannel() error {
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 10
-
-	b.keyboard = tgbotapi.NewInlineKeyboardMarkup(
+func (b *Bot) setKeyboards() {
+	b.menuKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Artists", "/artists"),
 			tgbotapi.NewInlineKeyboardButtonData("Albums", "/albums"),
@@ -50,6 +49,7 @@ func (b *Bot) initUpdatesChannel() error {
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Subscribe", "/subscribe"),
 			tgbotapi.NewInlineKeyboardButtonData("Unsubscribe", "/unsubscribe"),
+			tgbotapi.NewInlineKeyboardButtonData("Favorites", "/favorites"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Help", "/help"),
@@ -61,6 +61,14 @@ func (b *Bot) initUpdatesChannel() error {
 		),
 	)
 
+	b.artistsKeyboard = tgbotapi.NewInlineKeyboardMarkup()
+}
+
+func (b *Bot) initUpdatesChannel() error {
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 10
+
+	b.setKeyboards()
 	var err error
 	b.updates, err = b.bot.GetUpdatesChan(u)
 	if err != nil {

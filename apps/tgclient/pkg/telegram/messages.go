@@ -11,11 +11,11 @@ const msgNoArtists = "🚨🚨🚨No artists in the found!!!🚨🚨🚨"
 const msgNoFavorites = "😱😱😱You have no favorite artists!😱😱😱"
 const msgListCommand = "Get Help by pressing /help 🧙‍♂️\n" +
 	"[DEBUG] If you are not registered in the service, please do it by pressing -> /register 🖖\n" +
+	"View the menu -> /catalog 📄\n" +
 	"View catalog by pressing -> /catalog 🎸\n" +
 	"Add the artist to favorites by pressing -> /subscribe 🖋\n" +
 	"Remove the artist from favorites by pressing -> /unsubscribe ❌\n" +
-	"Get your favorites here -> /favorites 🎧\n" +
-	"View stored discography -> /discography 📄\n"
+	"Get your favorites here -> /favorites 🎧\n"
 
 const msgAskArtist = "Haven't found artist you want? Add it here -> /addArtist"
 

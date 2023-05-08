@@ -51,7 +51,7 @@ func getByteArrayByURL(fullUrl string) []byte {
 func ReadArtist(ArtistName string) lastfm_structs2.LastFmArtistJson {
 	// JSON: /2.0/?method=artist.getinfo&artist=Cher&api_key=YOUR_API_KEY&format=json
 	//input CommonRoot
-	ArtistName = strings.ReplaceAll(ArtistName, " ", "+")
+	ArtistName = strings.ReplaceAll(ArtistName, " ", "%20")
 	fullUrl := getURLMain() + getURLMethod() + getMethodArtistGetInfo() +
 		getURLApi() + getApi() + getURLArtist() + ArtistName + getURLFormat()
 	fullUrl = strings.Replace(fullUrl, " ", "+", -1)

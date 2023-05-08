@@ -2,14 +2,12 @@ package kafka_producer
 
 import (
 	"context"
-	"errors"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"os"
 	"producer/internal/parsers/parser-discogs/discogs-functions"
 	"producer/internal/parsers/parser-lastfm/lastfm-functions"
 	"strings"
-	"time"
 )
 
 var cBrokerAddress = "localhost:9092"
@@ -47,29 +45,14 @@ func Produce(topic string, message []byte, cs chan string) {
 		Topic:    topic,
 		Balancer: &kafka.LeastBytes{},
 	}
-	messages := []kafka.Message{
-		{
-			Key:   []byte("Key-tmp"),
-			Value: message,
-		},
+	messages := kafka.Message{
+		Key:   []byte("Key-tmp"),
+		Value: message,
 	}
-
-	var err error
-	const retries = 3
-	for i := 0; i < retries; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		err = w.WriteMessages(ctx, messages...)
-		if errors.Is(err, kafka.LeaderNotAvailable) || errors.Is(err, context.DeadlineExceeded) {
-			time.Sleep(time.Millisecond * 250)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("unexpected error %v", err)
-		}
+	err := w.WriteMessages(context.Background(), messages)
+	if err != nil {
+		panic("DSDs")
 	}
-
 	if err := w.Close(); err != nil {
 		log.Fatal("failed to close writer:", err)
 	}

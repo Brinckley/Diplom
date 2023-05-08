@@ -10,6 +10,7 @@ RUN mkdir "/app_p/internal"
 COPY /internal /app_p/internal
 RUN mkdir "/app_p/test"
 COPY /test /app_p/test
+COPY /input.txt /app_p/input.txt
 
 COPY go.mod .
 COPY go.sum .

@@ -3,6 +3,7 @@ package collector
 import (
 	"hash/fnv"
 	"producer/internal/parsers/interfaces"
+	"producer/internal/utils"
 	"strconv"
 )
 
@@ -40,12 +41,12 @@ type ArtistDB struct {
 
 func ArtistDBBuilder(la, da interfaces.IArtist) ArtistDB {
 	artist := ArtistDB{
-		Name:       da.GetName(),
+		Name:       la.GetName(),
 		Bio:        la.GetBio(),
 		OnTour:     la.GetOnTour(),
 		Picture:    la.GetImage(),
-		UrlLastfm:  la.GetUrl(),
-		UrlDiscogs: da.GetUrl(),
+		UrlLastfm:  utils.DecodeUrl(la.GetUrl()),
+		UrlDiscogs: utils.DecodeUrl(da.GetUrl()),
 		Genre:      la.GetGenre(),
 
 		IdLastfm:  la.GetId(),
@@ -75,9 +76,9 @@ func AlbumDBBuilder(la, da interfaces.IAlbum) AlbumDB {
 	album := AlbumDB{
 		Name:       da.GetTitle(),
 		Release:    strconv.Itoa(da.GetYear()),
-		UrlLastfm:  la.GetUrl(),
-		UrlDiscogs: da.GetUrl(),
-		Picture:    la.GetImage(),
+		UrlLastfm:  utils.DecodeUrl(la.GetUrl()),
+		UrlDiscogs: utils.DecodeUrl(da.GetUrl()),
+		Picture:    utils.DecodeUrl(la.GetImage()),
 		TrackCount: l,
 
 		ArtistHash: hash(da.GetArtistsId()),
@@ -103,7 +104,7 @@ func TrackDBBuilder(la interfaces.ITrack, da interfaces.IAlbum) TrackDB {
 		Name:      la.GetTitle(),
 		Duration:  la.GetDuration(),
 		Position:  la.GetPosition(),
-		UrlLastfm: la.GetUrl(),
+		UrlLastfm: utils.DecodeUrl(la.GetUrl()),
 
 		ArtistHash: hash(da.GetArtistsId()),
 		AlbumHash:  hash(la.GetAlbumId()),

@@ -95,7 +95,7 @@ func (p *TgPostgres) GetAllArtists() ([]string, error) {
 	}
 	defer func() { _ = conn.Close(context.Background()) }()
 
-	rows, err := conn.Query(context.Background(), "select name from "+p.cTableArtists)
+	rows, err := conn.Query(context.Background(), fmt.Sprintf("select name from %s order by name", p.cTableArtists))
 	fmt.Println("select name from ", p.cTableArtists)
 	if err != nil {
 		return nil, err

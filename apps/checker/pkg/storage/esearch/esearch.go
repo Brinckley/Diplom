@@ -45,7 +45,7 @@ func (c *ESClient) SearchArtist(artistName string) ([]ElasticDocs, error) {
 		Request(&search.Request{
 			Query: &types.Query{
 				Match: map[string]types.MatchQuery{
-					"artist": {Query: artistName},
+					"title": {Query: artistName},
 				},
 			},
 		}).Do(context.Background())

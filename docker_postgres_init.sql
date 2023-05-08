@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS albums(
 
 CREATE TABLE IF NOT EXISTS tracks(
       id          SERIAL   PRIMARY KEY,
-	  name        VARCHAR(100) NOT NULL,
+	  name        VARCHAR(255) NOT NULL,
       urlLastfm   VARCHAR(1023),
       duration    VARCHAR(100),
       position    VARCHAR(100),

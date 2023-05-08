@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"producer/internal/kafka-producer"
+	kafka_producer "producer/internal/kafka-producer"
 	"producer/internal/parsers/interfaces"
 	discogs_functions2 "producer/internal/parsers/parser-discogs/discogs-functions"
 	discogs_structs2 "producer/internal/parsers/parser-discogs/discogs-structs"
@@ -66,7 +66,7 @@ func CheckErrorParser(err error, message string) {
 }
 
 func ParserCollectorArtistWithReleases(ArtistName string) {
-	time.Sleep(70 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	log.Printf("[INFO] Starting work with artist %s\n", ArtistName)
 	// lastfm Artist data got
@@ -81,6 +81,10 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 		log.Println("No such artist as : ", ArtistName)
 		return
 	}
+	oldName := discogsArtist.Name
+	discogsArtist.Name = ArtistName
+	//fmt.Println(discogsArtist.Name + " " + discogsArtist.ReleasesURL)
+	//fmt.Println(lastfmArtist.Artist.Name + " " + lastfmArtist.Artist.Url)
 
 	// all pages from artistId from discogs got
 	// we will iterate over these pages, searching for releases which are marked by tag "master" - this tag is a sign that
@@ -91,8 +95,9 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 	CheckErrorParser(err, fmt.Sprintln("Error unmarshalling album data for artist ", ArtistName))
 
 	albumsNum := 0
+	log.Println("Len ", len(discogsReleasesPages.Releases))
 	for _, r := range discogsReleasesPages.Releases { // iterating over artist releases
-		if r.Artist == ArtistName && r.Type == "master" { // filter only on master releases
+		if r.Artist == oldName && r.Type == "master" { // filter only on master releases
 			albumsNum++
 			// here we got the right name for the album, starting working with it....
 			time.Sleep(15 * time.Second)                                // anti antiDDOS pause
@@ -146,10 +151,9 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 			//log.Printf("%v. Final album Artisthash : %v\n", i+1, checkAlbumDB.ArtistHash)
 			//log.Printf("%v. Final album AlbumHash : %v\n", i+1, checkAlbumDB.AlbumHash)
 			aDb = bytes.Trim(aDb, "\x00") // trimming to get rid of useless bytes, that cause problems in the consumer
+			log.Printf("! Album %s ready", checkAlbumDB.Name)
 
 			kafka_producer.Produce("Album", aDb, nil)
-			// log.Println("Album sent...")
-
 			timeout := time.After(10 * time.Second)
 			chanTopic := make(chan string)
 			for i := 0; i < len(tDb); i++ {
@@ -158,7 +162,7 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 			for i := 0; i < len(tDb); i++ {
 				select {
 				case _ = <-chanTopic:
-					log.Printf("Value sent to kafka topic : \n")
+					//log.Printf("Value sent to kafka topic : \n")
 				case <-timeout:
 					log.Println("Error sending value to kafka topic (timeout)!")
 				}
@@ -173,5 +177,6 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 		log.Println("Error marshalling artist :", ArtistName)
 	}
 	dataArtist = bytes.Trim(dataArtist, "\x00")
+	log.Printf("! Artist %s ready", artist.Name)
 	kafka_producer.Produce("Artist", dataArtist, nil)
 }

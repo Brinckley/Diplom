@@ -1,7 +1,6 @@
 package telegram
 
 import (
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"tgclient/pkg/kafka"
 	"tgclient/pkg/storage"
@@ -15,7 +14,6 @@ const (
 	favoritesCmd   = "favorites"
 	subscribeCmd   = "subscribe"
 	unsubscribeCmd = "unsubscribe"
-	discographyCmd = "discography"
 	catalogCmd     = "catalog"
 )
 
@@ -43,7 +41,11 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
 	switch message.Command() {
 	case startCmd:
 		return b.handleStartCmd(message)
+	case catalogCmd:
+		return b.handleCatalog(message)
 	case artistsCmd:
+		return b.handleAllArtists(message)
+	case albumsCmd:
 		return b.handleAllArtists(message)
 	case favoritesCmd:
 		return b.handleAllFavorites(message)
@@ -53,28 +55,15 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
 		return b.handleUnsubscriptionIntro(message)
 	case helpCmd:
 		return b.handleHelpCmd(message)
-	case discographyCmd:
-		return b.handleDiscography(message)
 	default:
 		return b.handleUnknownCmd(message)
 	}
 }
 
-func (b *Bot) handleDiscographyDebug(message *tgbotapi.Message) (int, error) {
-	artistName := "Би-2"
-	albumList, err := b.storage.GetAlbumsByArtist(artistName)
-	if err != nil {
-		return ResFail, err
-	}
-	list := fmt.Sprintf("Полная дискография артиста %s:\n%v", artistName, albumList)
-	msg := tgbotapi.NewMessage(message.Chat.ID, list)
-	_, err = b.bot.Send(msg)
-	return ResOk, err
-}
-
-func (b *Bot) handleDiscography(message *tgbotapi.Message) (int, error) {
+// getAlbumsByArtist postgres
+func (b *Bot) handleCatalog(message *tgbotapi.Message) (int, error) {
 	msg := tgbotapi.NewMessage(message.Chat.ID, "Check the menu")
-	msg.ReplyMarkup = b.keyboard
+	msg.ReplyMarkup = b.menuKeyboard
 	_, err := b.bot.Send(msg)
 	return ResOk, err
 }

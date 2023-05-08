@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
-	"sync"
 	"time"
 )
 
@@ -48,10 +47,10 @@ func (k *ClientKafka) init() {
 
 func (k *ClientKafka) ConsumeAndSend() {
 	topicChan := make(chan string)
-	var m sync.Mutex
-	go k.consumeArtist(topicChan, &m)
-	//	go k.consumeAlbum(topicChan)
-	//	go k.consumeTrack(topicChan)
+	ctx := context.Background()
+	go k.consumeArtist(topicChan, ctx)
+	go k.consumeAlbum(topicChan, ctx)
+	go k.consumeTrack(topicChan, ctx)
 
 	timeout := time.After(70 * time.Second)
 	for i := 0; i < 1; i++ {
@@ -62,36 +61,39 @@ func (k *ClientKafka) ConsumeAndSend() {
 			log.Println("Error getting info from topic and writing to the db (timeout)!")
 		}
 	}
-	//k.postgresClient.DBSelectArtists()
-	//k.postgresClient.DBSelectAlbums()
-	//k.postgresClient.DBSelectTracks()
+	k.postgresClient.DBSelectArtists()
+	k.postgresClient.DBSelectAlbums()
+	k.postgresClient.DBSelectTracks()
 }
 
-func (k *ClientKafka) consumeArtist(tcs chan string, mutex *sync.Mutex) {
-	//group, err := kafka.NewConsumerGroup(kafka.ConsumerGroupConfig{
-	//	ID:                     "art-cg",
-	//	Brokers:                []string{k.cBrokerAddress},
-	//	Topics:                 []string{k.cArtistTopic},
-	//	StartOffset:            kafka.LastOffset,
-	//	ErrorLogger:            k.logger,
-	//	Timeout:                time.Second * 30,
-	//})
+func (k *ClientKafka) consumeArtist(tcs chan string, ctx context.Context) {
+	dialer := &kafka.Dialer{
+		Timeout:   time.Second * 10,
+		DualStack: true,
+	}
+
 	c := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:     []string{k.cBrokerAddress},
-		Topic:       k.cArtistTopic,
-		StartOffset: kafka.LastOffset,
-		MinBytes:    10e3, // 10KB
-		MaxBytes:    10e6, // 10MB
+		Brokers:         []string{k.cBrokerAddress},
+		Topic:           k.cArtistTopic,
+		StartOffset:     kafka.FirstOffset,
+		MinBytes:        1,
+		MaxBytes:        100e6,
+		CommitInterval:  time.Second / 100,
+		GroupID:         "art-cg",
+		MaxWait:         time.Hour * 24,
+		ReadLagInterval: 1 * time.Second,
+		Dialer:          dialer,
+		QueueCapacity:   100 * 2,
 	})
 
-	//err := c.Subscribe(k.cArtistTopic, nil)
-	//if err != nil {
-	//	k.logger.Fatal("[ERR] can't create consumer for topic Artist")
-	//}
-
 	for {
-		m, err := c.FetchMessage(context.Background())
+		m, err := c.ReadMessage(ctx)
 		if err != nil {
+			break
+		}
+		err = c.CommitMessages(context.Background(), m)
+		if err != nil {
+			log.Println("[ERR] can't commit msg : ", err.Error())
 			break
 		}
 
@@ -106,7 +108,7 @@ func (k *ClientKafka) consumeArtist(tcs chan string, mutex *sync.Mutex) {
 			return
 		}
 		log.Println("Appended data of artist :", artist.Name)
-		//k.postgresClient.DBInsertArtist(artist) // Taken away for while debugging // adding value to postgres
+		k.postgresClient.DBInsertArtist(artist) // Taken away for while debugging // adding value to postgres
 	}
 	if err := c.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)
@@ -115,18 +117,34 @@ func (k *ClientKafka) consumeArtist(tcs chan string, mutex *sync.Mutex) {
 	tcs <- k.cArtistTopic
 }
 
-func (k *ClientKafka) consumeAlbum(tcs chan string) {
+func (k *ClientKafka) consumeAlbum(tcs chan string, ctx context.Context) {
+	dialer := &kafka.Dialer{
+		Timeout:   time.Second * 10,
+		DualStack: true,
+	}
+
 	c := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{k.cBrokerAddress},
-		Topic:    k.cArtistTopic,
-		GroupID:  "alb-gr-id",
-		MinBytes: 10e3, // 10KB
-		MaxBytes: 10e6, // 10MB
+		Brokers:         []string{k.cBrokerAddress},
+		Topic:           k.cAlbumTopic,
+		StartOffset:     kafka.FirstOffset,
+		MinBytes:        1,
+		MaxBytes:        100e6,
+		CommitInterval:  time.Second / 100,
+		GroupID:         "alb-group-id",
+		MaxWait:         time.Hour * 24,
+		ReadLagInterval: 1 * time.Second,
+		Dialer:          dialer,
+		QueueCapacity:   100 * 2,
 	})
 
 	for {
-		m, err := c.ReadMessage(context.Background())
+		m, err := c.ReadMessage(ctx)
 		if err != nil {
+			break
+		}
+		err = c.CommitMessages(context.Background(), m)
+		if err != nil {
+			log.Println("[ERR] can't commit msg : ", err.Error())
 			break
 		}
 
@@ -137,7 +155,7 @@ func (k *ClientKafka) consumeAlbum(tcs chan string) {
 			album = postgres.AlbumDB{}
 		}
 		log.Println("Appended data of album :", album.Name)
-		//k.postgresClient.DBInsertAlbum(album) // Taken away for while debugging
+		k.postgresClient.DBInsertAlbum(album) // Taken away for while debugging
 	}
 	if err := c.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)
@@ -146,18 +164,41 @@ func (k *ClientKafka) consumeAlbum(tcs chan string) {
 	tcs <- k.cAlbumTopic
 }
 
-func (k *ClientKafka) consumeTrack(tcs chan string) {
+func (k *ClientKafka) consumeTrack(tcs chan string, ctx context.Context) {
+	dialer := &kafka.Dialer{
+		Timeout:   time.Second * 10,
+		DualStack: true,
+	}
+
 	c := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{k.cBrokerAddress},
-		Topic:    k.cArtistTopic,
-		GroupID:  "tra-gr-id",
-		MinBytes: 10e3, // 10KB
-		MaxBytes: 10e6, // 10MB
+		Brokers:         []string{k.cBrokerAddress},
+		Topic:           k.cTrackTopic,
+		StartOffset:     kafka.FirstOffset,
+		MinBytes:        1,
+		MaxBytes:        100e6,
+		CommitInterval:  time.Second / 100,
+		GroupID:         "tra-group-id",
+		MaxWait:         time.Hour * 24,
+		ReadLagInterval: 1 * time.Second,
+		Dialer:          dialer,
+		QueueCapacity:   100 * 2,
 	})
 
+	timerStart := time.Now()
+	trackCounter := 0
 	for {
-		m, err := c.ReadMessage(context.Background())
+		trackCounter++
+		if trackCounter == 1000 {
+			log.Println("[TIME INFO] time from start (or previous zero countdown mark) :", time.Since(timerStart))
+			timerStart = time.Now()
+		}
+		m, err := c.ReadMessage(ctx)
 		if err != nil {
+			break
+		}
+		err = c.CommitMessages(context.Background(), m)
+		if err != nil {
+			log.Println("[ERR] can't commit msg : ", err.Error())
 			break
 		}
 
@@ -167,8 +208,8 @@ func (k *ClientKafka) consumeTrack(tcs chan string) {
 			log.Printf("Error unmarshalling data from Broker : %v, Topic : %v\n", k.cBrokerAddress, k.cTrackTopic)
 			track = postgres.TrackDB{}
 		}
-		log.Println("Appended data of track :", track.Name)
-		//k.postgresClient.DBInsertTrack(track) // Taken away for while debugging
+		//log.Println("Appended data of track :", track.Name)
+		k.postgresClient.DBInsertTrack(track) // Taken away for while debugging
 	}
 	if err := c.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)
