@@ -18,8 +18,8 @@ func (e *Event) CreateNotification() string {
 	e.fillTheBlank()
 	msg := fmt.Sprintf("Hi! There is a new event of your favourite artist %s.\n"+
 		"It is called '%s'.\n"+
-		"Date is %s, %s\n"+
-		"Place where the event will be held is %s.\n"+
+		"Date is %s, %s.\n"+
+		"Place where the event will be held is %s.\n."+
 		"Tickets price is %s.\n"+
 		"Event link : '%s'.\n"+
 		"Place link : '%s'.\n"+

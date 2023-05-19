@@ -95,7 +95,7 @@ func (p *TgPostgres) GetAllArtists() ([]string, error) {
 	}
 	defer func() { _ = conn.Close(context.Background()) }()
 
-	rows, err := conn.Query(context.Background(), fmt.Sprintf("select name from %s order by name", p.cTableArtists))
+	rows, err := conn.Query(context.Background(), fmt.Sprintf("select name from %s order by name;", p.cTableArtists))
 	fmt.Println("select name from ", p.cTableArtists)
 	if err != nil {
 		return nil, err
@@ -161,15 +161,18 @@ func (p *TgPostgres) GetAllSubscribers(event kafka.Event) ([]int64, error) {
 	defer func() { _ = conn.Close(context.Background()) }()
 
 	querySelectSubs := fmt.Sprintf(
-		"select %s.сhatid from %s "+
+		"select users.сhatid from %s "+
 			"join %s on %s.id = %s.user_id "+
-			"join %s on %s.id = %s.artist_id and %s.name = '%s' "+
-			"and %s.updTime < %v",
-		p.cTableUsers, p.cTableUsers,
+			"join %s on %s.id = %s.artist_id and %s.name = '%s' ",
+		//"and %s.updTime > %v;", ///////////////////1!!!!!!!!!!!!!!!!!! <
+		p.cTableUsers,
 		p.cTableUserArtist, p.cTableUsers, p.cTableUserArtist,
 		p.cTableArtists, p.cTableArtists, p.cTableUserArtist, p.cTableArtists,
-		event.Artist, p.cTableUserArtist, event.TimeStamp)
-	log.Println("Get All Subscriber query : ", querySelectSubs)
+		event.Artist,
+		//p.cTableUserArtist,
+		//event.TimeStamp
+	)
+	log.Println("[QUERY] Get All Subscriber query : ", querySelectSubs)
 
 	rows, err := conn.Query(context.Background(), querySelectSubs)
 	if err != nil {
@@ -187,16 +190,18 @@ func (p *TgPostgres) GetAllSubscribers(event kafka.Event) ([]int64, error) {
 		subscribers = append(subscribers, sub)
 	}
 
-	err = p.updateSubscriptionTimeStamp(subscribers)
-	if err != nil {
-		return nil, err
-	}
+	//fmt.Println("CHECKING TIME STAMP")
+	//err = p.updateSubscriptionTimeStamp(subscribers)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//fmt.Println("END OF CHECK OF TIME STAMP")
 
 	return subscribers, nil
 }
 
 func (p *TgPostgres) getId(conn *pgx.Conn, table string, field string, value string) (int, error) {
-	queryGetId := fmt.Sprintf("select id from %s where %s='%s'", table, field, value)
+	queryGetId := fmt.Sprintf("select id from %s where %s='%s';", table, field, value)
 	fmt.Println("Get Id : ", queryGetId)
 	rows, err := conn.Query(context.Background(), queryGetId)
 	if err != nil {
@@ -215,7 +220,7 @@ func (p *TgPostgres) getId(conn *pgx.Conn, table string, field string, value str
 }
 
 func checkExistence(conn *pgx.Conn, table string, field string, value string) (bool, error) {
-	query := fmt.Sprintf("select EXISTS (select id from %s where %s='%s')", table, field, value)
+	query := fmt.Sprintf("select EXISTS (select id from %s where %s='%s');", table, field, value)
 	fmt.Println("Check Ex : ", query)
 	rows, err := conn.Query(context.Background(), query)
 	if err != nil {

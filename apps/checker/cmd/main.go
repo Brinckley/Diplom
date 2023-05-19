@@ -21,41 +21,41 @@ func main() {
 
 	esclient := esearch.NewESClient() // connect to esearch, where we will get info about every event
 
-	for i := 0; i < len(names); i++ {
-		log.Println("\nSearching for name : ", names[i])
-		events, err := esclient.SearchArtist(names[i])
-		if err != nil {
-			log.Fatalln("[ERR] ", err.Error())
-		}
-		log.Println("Event data : ", events)
-		//eventsChan <- events
+	//for i := 0; i < len(names); i++ {
+	//	log.Println("\nSearching for name : ", names[i])
+	//	events, err := esclient.SearchArtist(names[i])
+	//	if err != nil {
+	//		log.Fatalln("[ERR] ", err.Error())
+	//	}
+	//	log.Println("Event data : ", events)
+	//	eventsChan <- events
+	//}
+
+	ekafka := kafka.NewKafka()
+
+	eventsChan := make(chan []esearch.ElasticDocs, 1)
+	var mutex sync.Mutex
+	cnt := len(names)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < cnt; i++ {
+		wg.Add(1)
+		go func(name string) {
+			log.Println("\nSearching for name : ", name)
+			events, err := esclient.SearchArtist(name)
+			if err != nil {
+				log.Fatalln("[ERR] ", err.Error())
+			}
+			log.Println("Event data : ", events)
+			eventsChan <- events
+		}(names[i])
 	}
 
-	//ekafka := kafka.NewKafka()
-
-	//eventsChan := make(chan []esearch.ElasticDocs, 1)
-	//var mutex sync.Mutex
-	//cnt := len(names)
-	//wg := sync.WaitGroup{}
-	//
-	//for i := 0; i < cnt; i++ {
-	//	wg.Add(1)
-	//	go func(name string) {
-	//		log.Println("\nSearching for name : ", name)
-	//		events, err := esclient.SearchArtist(name)
-	//		if err != nil {
-	//			log.Fatalln("[ERR] ", err.Error())
-	//		}
-	//		log.Println("Event data : ", events)
-	//		eventsChan <- events
-	//	}(names[i])
-	//}
-	//
-	//for i := 0; i < cnt; i++ {
-	//	//go ReceiveFormChan(eventsChan, ekafka, &wg, &mutex)
-	//	go ReceiveFormChan(eventsChan, nil, &wg, &mutex)
-	//}
-	//wg.Wait()
+	for i := 0; i < cnt; i++ {
+		go ReceiveFormChan(eventsChan, ekafka, &wg, &mutex)
+		//go ReceiveFormChan(eventsChan, nil, &wg, &mutex)
+	}
+	wg.Wait()
 }
 
 func ReceiveFormChan(c chan []esearch.ElasticDocs, ekafka *kafka.ClientKafka, wg *sync.WaitGroup, mutex *sync.Mutex) {

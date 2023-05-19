@@ -35,6 +35,7 @@ func (k *ClientKafka) init() {
 	k.reader = kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     []string{k.brokerAddress},
 		Topic:       k.eventTopic,
+		GroupID:     "event-wg",
 		MinBytes:    5,
 		MaxBytes:    1e6,
 		StartOffset: kafka.LastOffset,

@@ -46,6 +46,8 @@ func LookAtSearchHtml(artistNameRaw, genre string) ([]kstructs.EventInfo, error)
 		//log.Println("----------------------------------------------111 !1111-----------", p.HTML())
 		innerPath := p.
 			Find("div", "class", "tile-card")
+		datePath := innerPath.Find("time", "class", "date")
+		fmt.Println("!!!!!!!!! ", datePath.HTML())
 		if innerPath.Error != nil {
 			log.Println("No inner info found!")
 			continue
@@ -54,7 +56,7 @@ func LookAtSearchHtml(artistNameRaw, genre string) ([]kstructs.EventInfo, error)
 			Artist:    artistNameRaw,
 			Title:     fetchTitle(innerPath),
 			TitleLink: fetchTitleLink(innerPath),
-			Date:      fetchDate(innerPath),
+			Date:      fetchDate(datePath),
 			Time:      fetchTime(innerPath),
 			Place:     fetchPlace(innerPath),
 			PlaceLink: fetchPlaceLink(innerPath),

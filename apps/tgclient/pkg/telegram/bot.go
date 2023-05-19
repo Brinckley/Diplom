@@ -95,7 +95,7 @@ func (b *Bot) StartHandlingEventUpdates(group *sync.WaitGroup) {
 				log.Println("[INFO] event received")
 				subscribers, err := b.storage.GetAllSubscribers(event)
 				if err != nil {
-					log.Println("[ERR] can't receive event from kafka!")
+					log.Println("[ERR] can't receive event from kafka! : ", err.Error())
 					return
 				}
 

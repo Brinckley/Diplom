@@ -33,16 +33,26 @@ func fetchTitleLink(root soup.Root) string {
 }
 
 func fetchDate(root soup.Root) string {
-	path := root.
-		Find("time", "class", "date").
-		Find("nobr")
-	if path.Error != nil {
-		log.Println("no date data found")
-		return ""
+	//path := root
+
+	dt := ""
+	for _, tr := range root.FindAll("span") {
+		dt += tr.Text() + " "
 	}
 
-	date := strings.TrimSpace(path.Text())
-	return date
+	return dt
+	//day := path.Find("span", "class", "day-m").HTML()
+	//mouth := path.Find("span", "class", "mouth").HTML()
+	//time := path.Find("span", "class", "time").HTML()
+	//
+	//if path.Error != nil {
+	//	log.Println("no date data found")
+	//	return ""
+	//}
+
+	//date := strings.TrimSpace(path.Text())
+	//date := day + " " + mouth + " " + time
+	//return date
 }
 
 func fetchTime(root soup.Root) string {
@@ -86,7 +96,8 @@ func fetchPlaceLink(root soup.Root) string {
 
 func fetchCost(root soup.Root) string {
 	path := root.
-		Find("div", "class", "cost")
+		Find("div", "class", "cost").
+		Find("div", "class", "price")
 	if path.Error != nil {
 		log.Println("no cost data found")
 		return ""

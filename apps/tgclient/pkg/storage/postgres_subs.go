@@ -83,10 +83,11 @@ func (p *TgPostgres) updateSubscriptionTimeStamp(subscribers []int64) error {
 
 	for _, s := range subscribers {
 		updTimeStampQuery := fmt.Sprintf(
-			"update %s set %s.updTime = %v where %s.user_id in "+
-				"(select id from %s where %s.chatID = %v)",
-			p.cTableUserArtist, p.cTableUserArtist, s, p.cTableUserArtist,
+			"update %s set updTime = %v where %s.user_id in "+
+				"(select id from %s where %s.сhatID = %v);",
+			p.cTableUserArtist, s, p.cTableUserArtist,
 			p.cTableUsers, p.cTableUsers, s)
+		fmt.Println("[QUERY @] ", updTimeStampQuery)
 		_, err = conn.Exec(context.Background(), updTimeStampQuery)
 		if err != nil {
 			return err

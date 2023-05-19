@@ -39,8 +39,8 @@ func main() {
 	chanEvent := make(chan kafka.Event)
 
 	tgBot := telegram.NewBot(bot, &logger, pStorage, chanEvent) // creating custom bot client
-
 	clKafka := kafka.NewKafka()
+
 	go clKafka.ConsumeEvents(context.Background(), chanEvent, &wg)
 	go tgBot.StartHandlingEventUpdates(&wg)
 	go func(group *sync.WaitGroup) {
