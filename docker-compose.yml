@@ -160,6 +160,31 @@ services:
       - ./env/checker.env
     networks: [ "go_develop" ]
 
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - 3000:3000/tcp
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+    environment:
+      - TERM=linux
+      - GF_LOG_LEVEL=debug
+      - GF_DATAPROXY_LOGGING=true
+      - GF_DEFAULT_APP_MODE=development
+
+  graphite:
+    image: graphiteapp/graphite-statsd:1.1.3
+    container_name: graphite
+    ports:
+      - 8080:8080/tcp
+    restart: always
+    networks: [ "go_develop" ]
+
+volumes:
+  grafana-volume:
+    external: true
+
 networks:
     go_develop:
         driver: bridge
+        external: true

@@ -4,6 +4,7 @@ import (
 	"consumer/internal/postgres"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -61,9 +62,9 @@ func (k *ClientKafka) ConsumeAndSend() {
 			log.Println("Error getting info from topic and writing to the db (timeout)!")
 		}
 	}
-	k.postgresClient.DBSelectArtists()
-	k.postgresClient.DBSelectAlbums()
-	k.postgresClient.DBSelectTracks()
+	//k.postgresClient.DBSelectArtists()
+	//k.postgresClient.DBSelectAlbums()
+	//k.postgresClient.DBSelectTracks()
 }
 
 func (k *ClientKafka) consumeArtist(tcs chan string, ctx context.Context) {
@@ -91,6 +92,7 @@ func (k *ClientKafka) consumeArtist(tcs chan string, ctx context.Context) {
 		if err != nil {
 			break
 		}
+		fmt.Println("[STATS] ARTIST TIME MSG : ", m.Time.Second())
 		err = c.CommitMessages(context.Background(), m)
 		if err != nil {
 			log.Println("[ERR] can't commit msg : ", err.Error())
@@ -142,6 +144,7 @@ func (k *ClientKafka) consumeAlbum(tcs chan string, ctx context.Context) {
 		if err != nil {
 			break
 		}
+		fmt.Println("[STATS] ALBUM TIME MSG : ", m.Time.Second())
 		err = c.CommitMessages(context.Background(), m)
 		if err != nil {
 			log.Println("[ERR] can't commit msg : ", err.Error())
@@ -196,6 +199,7 @@ func (k *ClientKafka) consumeTrack(tcs chan string, ctx context.Context) {
 		if err != nil {
 			break
 		}
+		fmt.Println("[STATS] TRACK TIME MSG : ", m.Time.Second())
 		err = c.CommitMessages(context.Background(), m)
 		if err != nil {
 			log.Println("[ERR] can't commit msg : ", err.Error())

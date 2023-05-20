@@ -1,220 +1,164 @@
 package telegram
 
 import (
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"tgclient/pkg/kafka"
-	"tgclient/pkg/storage"
+	"log"
+	"math/rand"
+	"strconv"
+	"sync"
+	"tgclient/pkg/utils"
+	"time"
 )
 
-const (
-	startCmd       = "start"
-	helpCmd        = "help"
-	artistsCmd     = "artists"
-	albumsCmd      = "albums"
-	favoritesCmd   = "favorites"
-	subscribeCmd   = "subscribe"
-	unsubscribeCmd = "unsubscribe"
-	catalogCmd     = "catalog"
-)
+func (b *Bot) StartHandlingEventUpdates(group *sync.WaitGroup) {
+	defer group.Done()
+	for {
+		select {
+		case event, ok := <-b.receiverChan:
+			if ok {
+				log.Println("[INFO] event received")
+				subscribers, err := b.storage.GetAllSubscribers(event)
+				if err != nil {
+					log.Println("[ERR] can't receive event from kafka! : ", err.Error())
+					return
+				}
 
-const (
-	ResOk = iota
-	ResFail
-	ResWaitForRemove
-	ResWaitForAdd
-)
+				log.Println("[INFO] starting iteration over list of subscribers...")
+				log.Println("[INFO] all list of subs : ", subscribers)
 
-func (b *Bot) handleRandomMessage(message *tgbotapi.Message, n *int) error {
-	b.logger.Printf("[%s] : '%s'", message.From.UserName, message.Text)
-	*n--
-	txt := msgRandomMessage
-	if *n == 0 {
-		txt = msgRandomMessageFinal
-	}
-	msg := tgbotapi.NewMessage(message.Chat.ID, txt)
-	_, err := b.bot.Send(msg)
-	return err
-}
-
-func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
-
-	switch message.Command() {
-	case startCmd:
-		return b.handleStartCmd(message)
-	case catalogCmd:
-		return b.handleCatalog(message)
-	case artistsCmd:
-		return b.handleAllArtists(message)
-	case albumsCmd:
-		return b.handleAllArtists(message)
-	case favoritesCmd:
-		return b.handleAllFavorites(message)
-	case subscribeCmd:
-		return b.handleSubscriptionIntro(message)
-	case unsubscribeCmd:
-		return b.handleUnsubscriptionIntro(message)
-	case helpCmd:
-		return b.handleHelpCmd(message)
-	default:
-		return b.handleUnknownCmd(message)
+				for _, sub := range subscribers {
+					log.Printf("[INFO STEP] int64 val : %v\n", sub)
+					_, err := b.handleNewEventReceived(sub, event)
+					if err != nil {
+						log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
+						return
+					}
+				}
+			}
+		default:
+			b.logger.Println("[UPD] no event updates found")
+		}
+		time.Sleep(10 * time.Second)
 	}
 }
 
-// getAlbumsByArtist postgres
-func (b *Bot) handleCatalog(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, "Check the menu")
-	msg.ReplyMarkup = b.menuKeyboard
-	_, err := b.bot.Send(msg)
-	return ResOk, err
-}
+func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
+	prev := "none"
+	rand.Seed(time.Now().UnixNano())
+	counter := rand.Intn(10) + 4
+	for update := range updates {
+		select {
+		case event, ok := <-b.receiverChan:
+			if ok {
+				log.Println("[INFO] event received")
+				subscribers, err := b.storage.GetAllSubscribers(event)
+				if err != nil {
+					log.Println("[ERR] can't receive event from kafka!")
+					return
+				}
+				log.Println("[INFO] starting iteration over list of subscribers...")
+				log.Println("[INFO] all list of subs : ", subscribers)
+				for _, sub := range subscribers {
+					log.Printf("[INFO STEP] int64 val : %v\n", sub)
+					_, err := b.handleNewEventReceived(sub, event)
+					if err != nil {
+						log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
+						return
+					}
+				}
+			}
+		default:
+			b.logger.Println("[UPD] no event updates found")
+		}
+		fmt.Println("Prev cmd : ", prev)
 
-func (b *Bot) handleStartCmd(message *tgbotapi.Message) (int, error) {
-	err := b.storage.Registration(message)
-	if err == storage.ErrUserExists {
-		return b.handleStartAgainCmd(message)
-	} else if err != nil {
-		return ResFail, err
+		if prev == "/subscribe" {
+			b.waitForAdd(update)
+			prev = update.Message.Text
+			continue
+		}
+
+		if prev == "/unsubscribe" {
+			b.waitForRemove(update)
+			prev = update.Message.Text
+			continue
+		}
+
+		if update.Message != nil {
+			if update.Message.IsCommand() {
+				prev = update.Message.Text
+				cmdRes, err := b.handleCommand(update.Message)
+				if err != nil {
+					b.logger.Printf("[ERR] Can't handle command '%s', err : %s", update.Message.Text, err.Error())
+					continue
+				}
+				b.logger.Printf("After handling command '%s' got result : %s", update.Message.Text, strconv.Itoa(cmdRes))
+				continue
+			} else {
+				err := b.handleRandomMessage(update.Message, &counter)
+				if counter == 0 {
+					counter = rand.Intn(10) + 4
+				}
+				if err != nil {
+					b.logger.Printf("[ERR] Can't handle message '%s', err : %s", update.Message.Text, err.Error())
+				}
+			}
+		} else if update.CallbackQuery != nil {
+			m, err := b.callbackHandler(&update)
+			if err != nil {
+				log.Println(err.Error())
+			}
+			prev = "/" + m
+			continue
+		}
 	}
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgStartCommand)
-	_, err = b.bot.Send(msg)
-	return ResOk, err
+	time.Sleep(5 * time.Second)
 }
 
-func (b *Bot) handleStartAgainCmd(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgStartAgainCommand)
-	_, err := b.bot.Send(msg)
-	return ResOk, err
-}
-
-func (b *Bot) handleNewEventReceived(chatId int64, event kafka.Event) (int, error) {
-	txtMsg := event.CreateNotification()
-	msg := tgbotapi.NewMessage(chatId, txtMsg)
-	_, err := b.bot.Send(msg)
-	return ResOk, err
-}
-
-func (b *Bot) handleAllArtists(message *tgbotapi.Message) (int, error) {
-	artists, err := b.storage.GetAllArtists()
-	if err == storage.ErrNoArtists {
-		return ResFail, b.handleNoArtists(message)
+func (b *Bot) callbackHandler(update *tgbotapi.Update) (string, error) {
+	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+	if _, err := b.bot.AnswerCallbackQuery(callback); err != nil {
+		return "", fmt.Errorf("[ERR] unable to create callback query : %s", err.Error())
 	}
+
+	m := utils.CallbackToMsg(update.CallbackQuery)
+	_, err := b.handleCommand(&m)
 	if err != nil {
-		return ResFail, err
+		return "", fmt.Errorf("[ERR] with handling callback : %s", err.Error())
 	}
-	var all string
-	for _, artist := range artists {
-		all += artist + "\n"
-	}
-	if len(all) == 0 {
-		all = msgNoArtists
-	} else {
-		all = msgIntroArtists + all
-	}
-	msg := tgbotapi.NewMessage(message.Chat.ID, all)
-	_, err = b.bot.Send(msg)
-	return ResOk, err
+
+	return m.Command(), nil
 }
 
-func (b *Bot) handleNoArtists(message *tgbotapi.Message) error {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgNoArtists)
-	_, err := b.bot.Send(msg)
-	return err
-}
+func (b *Bot) waitForAdd(update tgbotapi.Update) bool {
+	if update.Message.IsCommand() {
+		_, err := b.handleNotArtistNameSub(update.Message)
+		if err != nil {
+			b.logger.Printf("[ERR] Can't handle command '%s', err : %s", update.Message.Text, err.Error())
+		}
+		return false
+	}
 
-func (b *Bot) handleAllFavorites(message *tgbotapi.Message) (int, error) {
-	favorites, err := b.storage.GetFavorites(message)
-	if err == storage.ErrNoFavorites {
-		return b.handleNoFavorites(message)
-	} else if err != nil {
-		return ResFail, err
-	}
-	var all string
-	for _, f := range favorites {
-		all += f + "\n"
-	}
-	if len(all) == 0 {
-		all = msgNoFavorites
-	} else {
-		all = msgIntroFavorites + all
-	}
-	msg := tgbotapi.NewMessage(message.Chat.ID, all)
-	_, err = b.bot.Send(msg)
-	return ResOk, err
-}
-
-func (b *Bot) handleSubscriptionIntro(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgSubscribeQuestion)
-	_, err := b.bot.Send(msg)
-	return ResWaitForAdd, err
-}
-
-func (b *Bot) handleSubscription(message *tgbotapi.Message) (int, error) {
-	subscribe, err := b.storage.Subscribe(message)
-	if err == storage.ErrNoArtists {
-		msg := tgbotapi.NewMessage(message.Chat.ID, msgSubscribeFail)
-		_, err = b.bot.Send(msg)
-		return ResOk, err
-	}
+	_, err := b.handleSubscription(update.Message)
 	if err != nil {
-		return ResFail, err
+		b.logger.Printf("[ERR] Can't handle command '%s', err : %s", update.Message.Text, err.Error())
 	}
-	if subscribe {
-		msg := tgbotapi.NewMessage(message.Chat.ID, msgSubscribeSuccess)
-		_, err = b.bot.Send(msg)
-		return ResOk, err
-	}
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgSubscribeAlready)
-	_, err = b.bot.Send(msg)
-	return ResOk, err
+	return true
 }
 
-func (b *Bot) handleUnsubscriptionIntro(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgUnsubscribeQuestion)
-	_, err := b.bot.Send(msg)
-	return ResWaitForRemove, err
-}
+func (b *Bot) waitForRemove(update tgbotapi.Update) bool {
+	if update.Message.IsCommand() {
+		_, err := b.handleNotArtistNameUnsub(update.Message)
+		if err != nil {
+			b.logger.Printf("[ERR] Can't handle command '%s', err : %s", update.Message.Text, err.Error())
+		}
+		return false
+	}
 
-func (b *Bot) handleUnsubscription(message *tgbotapi.Message) (int, error) {
-	subscribe, err := b.storage.Unsubscribe(message)
+	_, err := b.handleUnsubscription(update.Message)
 	if err != nil {
-		return ResFail, err
+		b.logger.Printf("[ERR] Can't handle command '%s', err : %s", update.Message.Text, err.Error())
 	}
-	if subscribe {
-		msg := tgbotapi.NewMessage(message.Chat.ID, msgUnsubscribeSuccess)
-		_, err = b.bot.Send(msg)
-		return ResOk, err
-	}
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgUnsubscribeFail)
-	_, err = b.bot.Send(msg)
-	return ResOk, nil
-}
-
-func (b *Bot) handleNoFavorites(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgNoFavorites)
-	_, err := b.bot.Send(msg)
-	return ResOk, err
-}
-
-func (b *Bot) handleUnknownCmd(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgUnknownCommand)
-	_, err := b.bot.Send(msg)
-	return ResOk, err
-}
-
-func (b *Bot) handleHelpCmd(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgHelpCommand)
-	_, err := b.bot.Send(msg)
-	return ResOk, err
-}
-
-func (b *Bot) handleNotArtistNameSub(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgSubscribeFail)
-	_, err := b.bot.Send(msg)
-	return ResOk, err
-}
-
-func (b *Bot) handleNotArtistNameUnsub(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, msgUnsubscribeFail)
-	_, err := b.bot.Send(msg)
-	return ResOk, err
+	return true
 }
