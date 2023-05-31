@@ -100,6 +100,9 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    ports:
+      - 8082:8082
+      - 8083:8083
     env_file:
       - ./env/consumer.env
     networks: [ "go_develop" ]
@@ -161,28 +164,27 @@ services:
     networks: [ "go_develop" ]
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:9.3.0
     ports:
-      - 3000:3000/tcp
-    volumes:
-      - ./provisioning:/etc/grafana/provisioning
+      - 3001:3001
     environment:
-      - TERM=linux
-      - GF_LOG_LEVEL=debug
-      - GF_DATAPROXY_LOGGING=true
-      - GF_DEFAULT_APP_MODE=development
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./grafana:/var/lib/grafana
 
-  graphite:
-    image: graphiteapp/graphite-statsd:1.1.3
-    container_name: graphite
+  prometheus:
+    image: prom/prometheus:v2.40.4
     ports:
-      - 8080:8080/tcp
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     restart: always
     networks: [ "go_develop" ]
 
 volumes:
-  grafana-volume:
-    external: true
+  grafana:
 
 networks:
     go_develop:

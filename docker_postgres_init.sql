@@ -53,28 +53,9 @@ CREATE TABLE IF NOT EXISTS user_artist ( -- favourite artists storage --
     UNIQUE (user_id, artist_id)
 );
 
-CREATE TABLE IF NOT EXISTS events (
-    id        SERIAL PRIMARY KEY,
-    title     VARCHAR(100) NOT NULL,
-    titleLink VARCHAR(200),
-    date      VARCHAR(100),
-    time      VARCHAR(100),
-    place     VARCHAR(100),
-    placeLink VARCHAR(100),
-    cost      VARCHAR(100)
-);
-
-CREATE TABLE IF NOT EXISTS artist_event ( 
-    id        SERIAL PRIMARY KEY,
-    artist_id INTEGER NOT NULL REFERENCES artists,
-    event_id  INTEGER NOT NULL REFERENCES events,
-    UNIQUE (artist_id, event_id)
-);
 
 SELECT * FROM artists;
 SELECT * FROM albums;
 SELECT * FROM tracks;
 SELECT * FROM users;
-SELECT * FROM events;
 SELECT * FROM user_artist;
-SELECT * FROM artist_event;

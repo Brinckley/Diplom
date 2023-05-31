@@ -69,25 +69,5 @@ func (c *ESClient) SearchArtist(artistName string) ([]ElasticDocs, error) {
 		artists = append(artists, h.Source)
 	}
 
-	//r := make([]ElasticDocs, len(hits.Hits.Hits))
-	//for i, e := range hits.Hits.Hits {
-	//	r[i].Artist = e.event.Artist
-	//	r[i].Date = e.event.Date
-	//	r[i].Time = e.event.Time
-	//	r[i].Place = e.event.Place
-	//	r[i].PlaceLink = e.event.PlaceLink
-	//	r[i].Title = e.event.Title
-	//	r[i].TitleLink = e.event.TitleLink
-	//	r[i].Cost = e.event.Cost
-	//}
-	//fmt.Printf("Data with type %T from artist : %s\n", r, r)
-
-	//var j interface{}
-	//err = json.NewDecoder(res.Body).Decode(&j)
-	//if err != nil {
-	//	return fmt.Errorf("can't decode for artist with name : %s, error : %s", artistName, err.Error())
-	//}
-	//log.Println("Full j text : ", j)
-
 	return artists, nil
 }

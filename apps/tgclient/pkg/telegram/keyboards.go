@@ -19,7 +19,7 @@ func (b *Bot) setKeyboardMainMenu() {
 	b.menuKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Artists", "/artists"),
-			tgbotapi.NewInlineKeyboardButtonData("Albums", "/albums"),
+			//tgbotapi.NewInlineKeyboardButtonData("Albums", "/albums"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Subscribe", "/subscribe"),

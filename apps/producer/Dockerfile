@@ -14,7 +14,7 @@ COPY /input.txt /app_p/input.txt
 
 COPY go.mod .
 COPY go.sum .
-WORKDIR "/app_p/cmd/producer"
+WORKDIR "/app_p/cmd"
 RUN go build -o main .
 
 CMD ["./main"]

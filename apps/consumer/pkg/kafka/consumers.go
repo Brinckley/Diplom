@@ -1,59 +1,28 @@
 package kafka
 
 import (
-	"consumer/internal/postgres"
+	"consumer/pkg/kafka/prometheus"
+	"consumer/pkg/postgres"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/segmentio/kafka-go"
-	"github.com/sirupsen/logrus"
 	"log"
-	"os"
 	"time"
 )
 
-type ClientKafka struct {
-	cBrokerAddress string
-	cNetwork       string
-	cArtistTopic   string
-	cAlbumTopic    string
-	cTrackTopic    string
-
-	cgArtist string
-	cgAlbum  string
-	cgTrack  string
-
-	logger         *logrus.Logger
-	postgresClient *postgres.ClientPostgres
-}
-
-func NewKafka(pc *postgres.ClientPostgres, logger *logrus.Logger) *ClientKafka {
-	var k ClientKafka
-	k.logger = logger
-	k.postgresClient = pc
-	k.init()
-	return &k
-}
-
-func (k *ClientKafka) init() {
-	k.cBrokerAddress = os.Getenv("BROKER_ADDRESS")
-	k.cNetwork = os.Getenv("NETWORK")
-	k.cArtistTopic = os.Getenv("ARTIST_TOPIC_NAME")
-	k.cAlbumTopic = os.Getenv("ALBUM_TOPIC_NAME")
-	k.cTrackTopic = os.Getenv("TRACK_TOPIC_NAME")
-	k.cgArtist = os.Getenv("ARTIST_CONSUMER_GROUP")
-	k.cgAlbum = os.Getenv("ALBUM_CONSUMER_GROUP")
-	k.cgTrack = os.Getenv("TRACK_CONSUMER_GROUP")
-}
+var DEBUG = false
 
 func (k *ClientKafka) ConsumeAndSend() {
 	topicChan := make(chan string)
 	ctx := context.Background()
+
+	go k.prometheusClient.StartHandling()
 	go k.consumeArtist(topicChan, ctx)
 	go k.consumeAlbum(topicChan, ctx)
 	go k.consumeTrack(topicChan, ctx)
 
-	timeout := time.After(70 * time.Second)
+	timeout := time.After(5000 * time.Second)
 	for i := 0; i < 1; i++ {
 		select {
 		case tc := <-topicChan:
@@ -62,9 +31,6 @@ func (k *ClientKafka) ConsumeAndSend() {
 			log.Println("Error getting info from topic and writing to the db (timeout)!")
 		}
 	}
-	//k.postgresClient.DBSelectArtists()
-	//k.postgresClient.DBSelectAlbums()
-	//k.postgresClient.DBSelectTracks()
 }
 
 func (k *ClientKafka) consumeArtist(tcs chan string, ctx context.Context) {
@@ -92,7 +58,8 @@ func (k *ClientKafka) consumeArtist(tcs chan string, ctx context.Context) {
 		if err != nil {
 			break
 		}
-		fmt.Println("[STATS] ARTIST TIME MSG : ", m.Time.Second())
+		//fmt.Println("[STATS] ARTIST TIME MSG : ", m.Time.Second())
+
 		err = c.CommitMessages(context.Background(), m)
 		if err != nil {
 			log.Println("[ERR] can't commit msg : ", err.Error())
@@ -110,7 +77,9 @@ func (k *ClientKafka) consumeArtist(tcs chan string, ctx context.Context) {
 			return
 		}
 		log.Println("Appended data of artist :", artist.Name)
-		k.postgresClient.DBInsertArtist(artist) // Taken away for while debugging // adding value to postgres
+		if !DEBUG {
+			k.postgresClient.DBInsertArtist(artist) // Taken away for while debugging // adding value to postgres
+		}
 	}
 	if err := c.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)
@@ -144,7 +113,8 @@ func (k *ClientKafka) consumeAlbum(tcs chan string, ctx context.Context) {
 		if err != nil {
 			break
 		}
-		fmt.Println("[STATS] ALBUM TIME MSG : ", m.Time.Second())
+		//fmt.Println("[STATS] ALBUM TIME MSG : ", m.Time.Second())
+
 		err = c.CommitMessages(context.Background(), m)
 		if err != nil {
 			log.Println("[ERR] can't commit msg : ", err.Error())
@@ -158,7 +128,9 @@ func (k *ClientKafka) consumeAlbum(tcs chan string, ctx context.Context) {
 			album = postgres.AlbumDB{}
 		}
 		log.Println("Appended data of album :", album.Name)
-		k.postgresClient.DBInsertAlbum(album) // Taken away for while debugging
+		if !DEBUG {
+			k.postgresClient.DBInsertAlbum(album) // Taken away for while debugging
+		}
 	}
 	if err := c.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)
@@ -187,19 +159,16 @@ func (k *ClientKafka) consumeTrack(tcs chan string, ctx context.Context) {
 		QueueCapacity:   100 * 2,
 	})
 
-	timerStart := time.Now()
+	timerStart := time.Now().UnixNano()
 	trackCounter := 0
+	var milis []int64
 	for {
 		trackCounter++
-		if trackCounter == 1000 {
-			log.Println("[TIME INFO] time from start (or previous zero countdown mark) :", time.Since(timerStart))
-			timerStart = time.Now()
-		}
 		m, err := c.ReadMessage(ctx)
 		if err != nil {
 			break
 		}
-		fmt.Println("[STATS] TRACK TIME MSG : ", m.Time.Second())
+
 		err = c.CommitMessages(context.Background(), m)
 		if err != nil {
 			log.Println("[ERR] can't commit msg : ", err.Error())
@@ -213,7 +182,26 @@ func (k *ClientKafka) consumeTrack(tcs chan string, ctx context.Context) {
 			track = postgres.TrackDB{}
 		}
 		//log.Println("Appended data of track :", track.Name)
-		k.postgresClient.DBInsertTrack(track) // Taken away for while debugging
+		if !DEBUG {
+			k.postgresClient.DBInsertTrack(track) // Taken away for while debugging
+		}
+
+		now := time.Now().UnixMicro()
+		delta := now - timerStart
+		milis = append(milis, delta)
+		fmt.Println("[STATS] TRACK TIME MSG : ", delta)
+		timerStart = now
+
+		if len(milis) >= 1000 {
+			log.Println("Length of milis : ", len(milis))
+			for _, mil := range milis {
+				k.prometheusClient.SendMessage(prometheus.NewMsgTrack(m, mil))
+				time.Sleep(1 * time.Second)
+			}
+			timerStart = time.Now().UnixMicro()
+			milis = []int64{timerStart}
+		}
+
 	}
 	if err := c.Close(); err != nil {
 		log.Fatal("failed to close reader:", err)

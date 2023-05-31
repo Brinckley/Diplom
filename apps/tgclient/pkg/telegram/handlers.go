@@ -13,6 +13,7 @@ import (
 
 func (b *Bot) StartHandlingEventUpdates(group *sync.WaitGroup) {
 	defer group.Done()
+
 	for {
 		select {
 		case event, ok := <-b.receiverChan:
