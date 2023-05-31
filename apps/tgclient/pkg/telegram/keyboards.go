@@ -18,16 +18,16 @@ func (b *Bot) setKeyboards() error {
 func (b *Bot) setKeyboardMainMenu() {
 	b.menuKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Artists", "/artists"),
-			//tgbotapi.NewInlineKeyboardButtonData("Albums", "/albums"),
+			tgbotapi.NewInlineKeyboardButtonData("Артисты", "/artists"),
+			tgbotapi.NewInlineKeyboardButtonData("Поиск", "/search"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Subscribe", "/subscribe"),
-			tgbotapi.NewInlineKeyboardButtonData("Unsubscribe", "/unsubscribe"),
-			tgbotapi.NewInlineKeyboardButtonData("Favorites", "/favorites"),
+			tgbotapi.NewInlineKeyboardButtonData("Подписаться", "/subscribe"),
+			tgbotapi.NewInlineKeyboardButtonData("Отписаться", "/unsubscribe"),
+			tgbotapi.NewInlineKeyboardButtonData("Избранное", "/favorites"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Help", "/help"),
+			tgbotapi.NewInlineKeyboardButtonData("Помощь", "/help"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL("Discogs", "https://www.discogs.com/"),

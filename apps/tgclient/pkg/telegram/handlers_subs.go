@@ -73,6 +73,12 @@ func (b *Bot) handleAllFavorites(message *tgbotapi.Message) (int, error) {
 	return ResOk, err
 }
 
+func (b *Bot) handleNoArtistName(message *tgbotapi.Message) (int, error) {
+	msg := tgbotapi.NewMessage(message.Chat.ID, msgNoArtists)
+	_, err := b.bot.Send(msg)
+	return ResOk, err
+}
+
 func (b *Bot) handleNoFavorites(message *tgbotapi.Message) (int, error) {
 	msg := tgbotapi.NewMessage(message.Chat.ID, msgNoFavorites)
 	_, err := b.bot.Send(msg)

@@ -19,14 +19,11 @@ type ClientPrometheus struct {
 	PortInner string
 	Msgs      []MsgTrack
 	metrics   *Metrics
-
-	exchanger chan MsgTrack
 }
 
-func NewClientPrometheus(e chan MsgTrack) *ClientPrometheus {
+func NewClientPrometheus() *ClientPrometheus {
 	var p ClientPrometheus
 	p.init()
-	p.exchanger = e
 	p.Msgs = append(p.Msgs, MsgTrack{
 		MsgTopic:  "Start INFO",
 		MsgTime:   -1,

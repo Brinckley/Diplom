@@ -23,7 +23,8 @@ func (b *Bot) handleArtistCheck(message *tgbotapi.Message) (int, error) {
 				return 0, err
 			}
 
-			albumsMsg := "Albums of artist " + name + " :\n" + albums
+			//albumsMsg := "Albums of artist " + name + " :\n" + albums
+			albumsMsg := "Альбомы артиста " + name + " :\n" + albums
 			msg := tgbotapi.NewMessage(message.Chat.ID, albumsMsg)
 			_, err = b.bot.Send(msg)
 			return ResOk, err
@@ -34,29 +35,11 @@ func (b *Bot) handleArtistCheck(message *tgbotapi.Message) (int, error) {
 }
 
 func (b *Bot) handleAllArtists(message *tgbotapi.Message) (int, error) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, "Check the menu")
+	//msg := tgbotapi.NewMessage(message.Chat.ID, "Check the menu")
+	msg := tgbotapi.NewMessage(message.Chat.ID, "Смотри меню")
 	msg.ReplyMarkup = b.artistsKeyboard
 	_, err := b.bot.Send(msg)
 	return ResOk, err
-	//artists, err := b.storage.GetAllArtists()
-	//if err == storage.ErrNoArtists {
-	//	return ResFail, b.handleNoArtists(message)
-	//}
-	//if err != nil {
-	//	return ResFail, err
-	//}
-	//var all string
-	//for _, artist := range artists {
-	//	all += artist + "\n"
-	//}
-	//if len(all) == 0 {
-	//	all = msgNoArtists
-	//} else {
-	//	all = msgIntroArtists + all
-	//}
-	//msg := tgbotapi.NewMessage(message.Chat.ID, all)
-	//_, err = b.bot.Send(msg)
-	//return ResOk, err
 }
 
 func (b *Bot) handleNoArtists(message *tgbotapi.Message) error {

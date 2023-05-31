@@ -12,12 +12,15 @@ import (
 )
 
 var DEBUG = false
+var PROMETH = false
 
 func (k *ClientKafka) ConsumeAndSend() {
 	topicChan := make(chan string)
 	ctx := context.Background()
 
-	go k.prometheusClient.StartHandling()
+	if PROMETH {
+		go k.prometheusClient.StartHandling()
+	}
 	go k.consumeArtist(topicChan, ctx)
 	go k.consumeAlbum(topicChan, ctx)
 	go k.consumeTrack(topicChan, ctx)
@@ -186,20 +189,22 @@ func (k *ClientKafka) consumeTrack(tcs chan string, ctx context.Context) {
 			k.postgresClient.DBInsertTrack(track) // Taken away for while debugging
 		}
 
-		now := time.Now().UnixMicro()
-		delta := now - timerStart
-		milis = append(milis, delta)
-		fmt.Println("[STATS] TRACK TIME MSG : ", delta)
-		timerStart = now
+		if PROMETH {
+			now := time.Now().UnixMicro()
+			delta := now - timerStart
+			milis = append(milis, delta)
+			fmt.Println("[STATS] TRACK TIME MSG : ", delta)
+			timerStart = now
 
-		if len(milis) >= 1000 {
-			log.Println("Length of milis : ", len(milis))
-			for _, mil := range milis {
-				k.prometheusClient.SendMessage(prometheus.NewMsgTrack(m, mil))
-				time.Sleep(1 * time.Second)
+			if len(milis) >= 1000 {
+				log.Println("Length of milis : ", len(milis))
+				for _, mil := range milis {
+					k.prometheusClient.SendMessage(prometheus.NewMsgTrack(m, mil))
+					time.Sleep(1 * time.Second)
+				}
+				timerStart = time.Now().UnixMicro()
+				milis = []int64{timerStart}
 			}
-			timerStart = time.Now().UnixMicro()
-			milis = []int64{timerStart}
 		}
 
 	}

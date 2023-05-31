@@ -18,19 +18,16 @@ type ClientKafka struct {
 	cgAlbum  string
 	cgTrack  string
 
-	exchanger chan prometheus.MsgTrack
-
 	logger           *logrus.Logger
 	postgresClient   *postgres.ClientPostgres
 	prometheusClient *prometheus.ClientPrometheus
 }
 
-func NewKafka(pc *postgres.ClientPostgres, logger *logrus.Logger, prom *prometheus.ClientPrometheus, e chan prometheus.MsgTrack) *ClientKafka {
+func NewKafka(pc *postgres.ClientPostgres, logger *logrus.Logger, prom *prometheus.ClientPrometheus) *ClientKafka {
 	var k ClientKafka
 	k.logger = logger
 	k.postgresClient = pc
 	k.prometheusClient = prom
-	k.exchanger = e
 	k.init()
 	return &k
 }

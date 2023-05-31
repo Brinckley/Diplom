@@ -74,6 +74,12 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 		}
 		fmt.Println("Prev cmd : ", prev)
 
+		if prev == "/search" {
+			b.waitForAdd(update)
+			prev = update.Message.Text
+			continue
+		}
+
 		if prev == "/subscribe" {
 			b.waitForAdd(update)
 			prev = update.Message.Text
@@ -130,6 +136,15 @@ func (b *Bot) callbackHandler(update *tgbotapi.Update) (string, error) {
 	}
 
 	return m.Command(), nil
+}
+
+func (b *Bot) waitForSearch(update tgbotapi.Update) bool {
+	_, err := b.handleArtistCheck(update.Message)
+	if err != nil {
+		log.Printf("[ERR] Can't handle artist search by name. Command text : %v, err : %v", update.Message, err.Error())
+		return false
+	}
+	return true
 }
 
 func (b *Bot) waitForAdd(update tgbotapi.Update) bool {
