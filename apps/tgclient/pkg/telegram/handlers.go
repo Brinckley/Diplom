@@ -7,9 +7,12 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
+	"tgclient/pkg/prometheus"
 	"tgclient/pkg/utils"
 	"time"
 )
+
+var PROM = true
 
 func (b *Bot) StartHandlingEventUpdates(group *sync.WaitGroup) {
 	defer group.Done()
@@ -35,12 +38,20 @@ func (b *Bot) StartHandlingEventUpdates(group *sync.WaitGroup) {
 						log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
 						return
 					}
+					time.Sleep(100 * time.Second)
 				}
+				// all operations with event are done. Log the time.
+				if PROM {
+					delta := time.Now().UnixMilli() - event.TimeReceived
+					log.Printf("---------------------%v  -  %v", event.Number, delta)
+					b.prometheusClient.SendMessage(prometheus.NewEventNotification(event.Title, delta))
+				}
+				time.Sleep(70 * time.Second)
 			}
 		default:
 			b.logger.Println("[UPD] no event updates found")
 		}
-		time.Sleep(10 * time.Second)
+		//time.Sleep(10 * time.Second)
 	}
 }
 
@@ -49,33 +60,10 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 	rand.Seed(time.Now().UnixNano())
 	counter := rand.Intn(10) + 4
 	for update := range updates {
-		select {
-		case event, ok := <-b.receiverChan:
-			if ok {
-				log.Println("[INFO] event received")
-				subscribers, err := b.storage.GetAllSubscribers(event)
-				if err != nil {
-					log.Println("[ERR] can't receive event from kafka!")
-					return
-				}
-				log.Println("[INFO] starting iteration over list of subscribers...")
-				log.Println("[INFO] all list of subs : ", subscribers)
-				for _, sub := range subscribers {
-					log.Printf("[INFO STEP] int64 val : %v\n", sub)
-					_, err := b.handleNewEventReceived(sub, event)
-					if err != nil {
-						log.Printf("[ERR] can't handle event from kafka for chat %v!\n", sub)
-						return
-					}
-				}
-			}
-		default:
-			b.logger.Println("[UPD] no event updates found")
-		}
-		fmt.Println("Prev cmd : ", prev)
-
+		//fmt.Println("Prev cmd : ", prev)
 		if prev == "/search" {
-			b.waitForAdd(update)
+			log.Println("SEARCH")
+			b.waitForSearch(update)
 			prev = update.Message.Text
 			continue
 		}
@@ -120,7 +108,7 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 			continue
 		}
 	}
-	time.Sleep(5 * time.Second)
+	//time.Sleep(5 * time.Second)
 }
 
 func (b *Bot) callbackHandler(update *tgbotapi.Update) (string, error) {
@@ -139,6 +127,14 @@ func (b *Bot) callbackHandler(update *tgbotapi.Update) (string, error) {
 }
 
 func (b *Bot) waitForSearch(update tgbotapi.Update) bool {
+	if update.Message.IsCommand() {
+		_, err := b.handleNotArtistNameSub(update.Message)
+		if err != nil {
+			b.logger.Printf("[ERR] Can't handle command '%s', err : %s", update.Message.Text, err.Error())
+		}
+		return false
+	}
+
 	_, err := b.handleArtistCheck(update.Message)
 	if err != nil {
 		log.Printf("[ERR] Can't handle artist search by name. Command text : %v, err : %v", update.Message, err.Error())

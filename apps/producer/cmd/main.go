@@ -10,21 +10,30 @@ import (
 	"producer/internal/kafka-producer"
 )
 
+var DATA_LOAD_DEBUG = false
+
 func main() {
 	kafka_producer.InitProducer()
 	consulDebug := false
 
 	if !consulDebug {
-		Parsing()
+		if DATA_LOAD_DEBUG {
+			CheckLoad(100000)
+		} else {
+			Parsing()
+		}
 	} else {
 		consul.RegisterServer()
 	}
 
 }
 
+func CheckLoad(num int) {
+	collector.FalseCollector(num)
+}
+
 func Parsing() {
 	inputPath := os.Getenv("INPUT_PATH")
-	//outputPath := os.Getenv("OUTPUT_PATH")
 	file, err := os.Open(inputPath)
 	if err != nil {
 		log.Fatalln("[ERR] can't open the file to read artists : ", err.Error())

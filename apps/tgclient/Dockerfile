@@ -12,4 +12,7 @@ COPY /pkg /app_tg/pkg
 WORKDIR "/app_tg/cmd"
 RUN go build -o main .
 
+EXPOSE 8084
+EXPOSE 8085
+
 CMD ["./main"]

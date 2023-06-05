@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"log"
-	"tgclient/pkg/utils"
 )
 
-func (p *TgPostgres) GetAlbumsByArtist(artistName string) (string, error) {
+func (p *TgPostgres) GetAlbumsByArtist(artistName string) ([]string, error) {
 	conn, err := pgx.Connect(context.Background(), p.cDsn)
 	if err != nil {
-		return "", fmt.Errorf("Unable to connect to database: %v\n", err)
+		return []string{}, fmt.Errorf("Unable to connect to database: %v\n", err)
 	}
 	defer func() { _ = conn.Close(context.Background()) }()
 
@@ -25,7 +24,7 @@ func (p *TgPostgres) GetAlbumsByArtist(artistName string) (string, error) {
 
 	rows, err := conn.Query(context.Background(), queryGetByName)
 	if err != nil {
-		return "", err
+		return []string{}, err
 	}
 	defer rows.Close()
 
@@ -44,5 +43,5 @@ func (p *TgPostgres) GetAlbumsByArtist(artistName string) (string, error) {
 		albumList = append(albumList, album.ToString())
 	}
 
-	return utils.ListOfAlbumsFormatter(albumList), nil
+	return albumList, nil
 }

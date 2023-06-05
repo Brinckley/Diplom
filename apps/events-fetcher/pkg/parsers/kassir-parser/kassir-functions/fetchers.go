@@ -33,26 +33,12 @@ func fetchTitleLink(root soup.Root) string {
 }
 
 func fetchDate(root soup.Root) string {
-	//path := root
-
 	dt := ""
 	for _, tr := range root.FindAll("span") {
 		dt += tr.Text() + " "
 	}
 
 	return dt
-	//day := path.Find("span", "class", "day-m").HTML()
-	//mouth := path.Find("span", "class", "mouth").HTML()
-	//time := path.Find("span", "class", "time").HTML()
-	//
-	//if path.Error != nil {
-	//	log.Println("no date data found")
-	//	return ""
-	//}
-
-	//date := strings.TrimSpace(path.Text())
-	//date := day + " " + mouth + " " + time
-	//return date
 }
 
 func fetchTime(root soup.Root) string {

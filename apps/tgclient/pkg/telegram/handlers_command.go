@@ -14,6 +14,7 @@ const (
 	subscribeCmd   = "subscribe"
 	unsubscribeCmd = "unsubscribe"
 	catalogCmd     = "catalog"
+	searchCmd      = "search"
 )
 
 const (
@@ -54,6 +55,8 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) (int, error) {
 		return b.handleUnsubscriptionIntro(message)
 	case helpCmd:
 		return b.handleHelpCmd(message)
+	case searchCmd:
+		return b.handleSearch(message)
 	default:
 		return b.handleArtistCheck(message)
 	}
@@ -69,7 +72,11 @@ func (b *Bot) handleCatalog(message *tgbotapi.Message) (int, error) {
 
 func (b *Bot) handleNewEventReceived(chatId int64, event kafka.Event) (int, error) {
 	txtMsg := event.CreateNotification()
+	//this code must be connected for prometheus usage
 	msg := tgbotapi.NewMessage(chatId, txtMsg)
 	_, err := b.bot.Send(msg)
 	return ResOk, err
+
+	//_ = tgbotapi.NewMessage(chatId, txtMsg)
+	//return ResOk, nil
 }

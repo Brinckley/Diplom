@@ -10,7 +10,6 @@ import (
 
 func main() {
 	// init all environment
-
 	prom := prometheus.NewClientPrometheus()
 
 	logger := logrus.Logger{Formatter: &logrus.JSONFormatter{}} // creating and initializing the logger
@@ -18,7 +17,7 @@ func main() {
 
 	postgresClient := postgres.NewPostgres(&logger)
 	clientKafka := kafka.NewKafka(postgresClient, &logger, prom)
-	//clientKafka := kafka.NewKafka(nil, &logger, prom, ) // postgres taken away for debug
+	//clientKafka := kafka.NewKafka(nil, &logger, prom, ) // postgres may be taken away for debug
 
 	clientKafka.ConsumeAndSend()
 }

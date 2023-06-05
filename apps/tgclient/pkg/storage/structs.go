@@ -39,10 +39,10 @@ func (a *AlbumDB) ToString() string {
 	a.UrlDiscogs = utils.DecodeUrl(a.UrlDiscogs)
 
 	return fmt.Sprintf(
-		"%v) %s, %s. %v треков.",
+		"%s, %s. %v треков.",
 		//	"Discogs : %s\n"+
 		//	"LastFm : %s\n",
-		a.Id, a.Name, a.Release, a.TrackCount,
+		a.Name, a.Release, a.TrackCount,
 		//a.UrlDiscogs,
 		//a.UrlLastfm
 	)

@@ -5,15 +5,17 @@ import (
 )
 
 type Event struct {
-	Artist    string `json:"artist"`
-	Title     string `json:"title"`
-	TitleLink string `json:"titleLink"`
-	Date      string `json:"date"`
-	Time      string `json:"time"`
-	Place     string `json:"place"`
-	PlaceLink string `json:"placeLink"`
-	Cost      string `json:"cost"`
-	TimeStamp int64  `json:"timeStamp"`
+	Artist       string `json:"artist"`
+	Title        string `json:"title"`
+	TitleLink    string `json:"titleLink"`
+	Date         string `json:"date"`
+	Time         string `json:"time"`
+	Place        string `json:"place"`
+	PlaceLink    string `json:"placeLink"`
+	Cost         string `json:"cost"`
+	TimeStamp    int64  `json:"timeStamp"`
+	TimeReceived int64
+	Number       int
 }
 
 func (e *Event) CreateNotification() string {

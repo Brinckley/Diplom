@@ -14,11 +14,7 @@ import (
 )
 
 func ParserCollectorAlbum(lastfmAlbum, discogsAlbum interfaces.IAlbum) []byte {
-	// log.Printf("Length 1 : %v, Length 2 : %v\n", lastfmAlbum.GetTracksLen(), discogsAlbum.GetTracksLen())
-
-	//log.Println("Artist id before hash :", discogsAlbum.GetArtistsId())
 	album := AlbumDBBuilder(lastfmAlbum, discogsAlbum) // building db structure object from two elements
-	//log.Println("Artist id after hash :", album.ArtistHash)
 	data, err := json.Marshal(album)
 	if err != nil {
 		log.Println("Error marshalling album :", discogsAlbum.GetTitle())
@@ -38,15 +34,7 @@ func ParserCollectorTrack(lastfmAlbum, discogsAlbum interfaces.IAlbum) [][]byte 
 	}
 
 	for i := 0; i < len(albumTracks); i++ { // iterating over the album tracks list to convert them to the db table format
-		//	log.Printf("---%v. Original value : %v", i+1, albumTracks[i])
-
 		trackTmp := TrackDBBuilder(albumTracks[i], discogsAlbum)
-		//log.Println("--Artist id according to track :", trackTmp.ArtistHash)
-		//log.Println("---Album id according to track :", trackTmp.AlbumHash)
-		//	log.Printf("Type : %T", trackTmp)
-
-		//log.Printf("---%v. Final track ArtistHash : %v\n", i+1, trackTmp.ArtistHash)
-		//log.Printf("---%v. Final track AlbumHash : %v\n", i+1, trackTmp.AlbumHash)
 
 		data, err := json.Marshal(trackTmp)
 		if err != nil {
@@ -83,8 +71,6 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 	}
 	oldName := discogsArtist.Name
 	discogsArtist.Name = ArtistName
-	//fmt.Println(discogsArtist.Name + " " + discogsArtist.ReleasesURL)
-	//fmt.Println(lastfmArtist.Artist.Name + " " + lastfmArtist.Artist.Url)
 
 	// all pages from artistId from discogs got
 	// we will iterate over these pages, searching for releases which are marked by tag "master" - this tag is a sign that
@@ -105,10 +91,6 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 			// BUT sometimes id leads to another album that has nothing to do
 			// with the artist or searched album !!!! (discogs bug, I guess...)
 			// fixing it by another function, that builds AlbumDB from discogs.releases + lastfm.album
-
-			//log.Printf("\n%v. ID %v, Title : %v, Type : %v\n", i+1, r.ID, r.Title, r.Type) // writing info into log
-			//log.Printf("Url for release : %s\n", r.ResourceURL)
-
 			var masterAlbum discogs_structs2.DiscogsMasters
 			err := json.Unmarshal(discogsAlbumData, &masterAlbum) // unmarshalling data got by albumId
 			if err != nil {
@@ -125,18 +107,13 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 			var aDb []byte
 			var tDb [][]byte
 
-			//v := masterAlbum.ResourceURL == r.ResourceURL
-			//log.Println("Discogs Master Resourses Url Equals Discgos Release Resources Url : ", v)
-
 			if masterAlbum.Title == r.Title { // checking the albumTmp leads to the same album that was requested from releases list
 				aDb = ParserCollectorAlbum(lastfmAlbum, &masterAlbum) // full album thing
 				tDb = ParserCollectorTrack(lastfmAlbum, &masterAlbum)
-				//log.Println("////////////Artist id according to album : ", masterAlbum.GetArtistsId())
 
 			} else {
 				aDb = ParserCollectorAlbum(lastfmAlbum, r) // if id leads to the mistake
 				tDb = ParserCollectorTrack(lastfmAlbum, r)
-				//log.Println("////////////Artist id according to album : ", r.GetArtistsId())
 			}
 
 			var checkAlbumDB AlbumDB
@@ -145,11 +122,6 @@ func ParserCollectorArtistWithReleases(ArtistName string) {
 				log.Println("Error unmarshalling data (after parsing) of album by number of : ", albumsNum+1)
 				continue
 			}
-
-			//log.Printf("%v. Final title : %v, Final tracks number : %v\n",
-			//	i+1, checkAlbumDB.Name, checkAlbumDB.TrackCount) // writing unmarshalled info into log
-			//log.Printf("%v. Final album Artisthash : %v\n", i+1, checkAlbumDB.ArtistHash)
-			//log.Printf("%v. Final album AlbumHash : %v\n", i+1, checkAlbumDB.AlbumHash)
 			aDb = bytes.Trim(aDb, "\x00") // trimming to get rid of useless bytes, that cause problems in the consumer
 			log.Printf("! Album %s ready", checkAlbumDB.Name)
 

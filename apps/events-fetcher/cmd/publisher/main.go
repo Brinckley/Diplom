@@ -50,6 +50,7 @@ func main() {
 	var mutex sync.Mutex
 	cnt := len(names)
 	wg := sync.WaitGroup{}
+	counter := 0
 
 	for i := 0; i < cnt; i++ {
 		wg.Add(1)                            // adding work for each of artists
@@ -59,6 +60,7 @@ func main() {
 				wg.Done() // nothing to do if error exists, job done
 				return
 			}
+			counter += len(allEvents)
 			eventsChan <- allEvents // sending got events to processing for es
 		}(names[i], genres[i]) // function works for each artist from the list
 	}
@@ -66,6 +68,7 @@ func main() {
 		go ReceiveFormChan(eventsChan, &wg, &mutex, esclient)
 	}
 	wg.Wait()
+	log.Println("[INFO] All EVENTS AMOUNT : ", counter)
 }
 
 func ReceiveFormChan(c chan []kassir_structs.EventInfo, wg *sync.WaitGroup, mutex *sync.Mutex, client *esearch.ESClient) {

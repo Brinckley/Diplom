@@ -46,6 +46,7 @@ func (k *ClientKafka) init() {
 }
 
 func (k *ClientKafka) ConsumeEvents(ctx context.Context, ueChan chan Event, wg *sync.WaitGroup) {
+	counter := 0
 	for {
 		msg, err := k.reader.ReadMessage(ctx)
 		if err != nil {
@@ -59,8 +60,10 @@ func (k *ClientKafka) ConsumeEvents(ctx context.Context, ueChan chan Event, wg *
 			event = Event{}
 			continue
 		}
-
-		time.Sleep(5 * time.Second)
+		event.TimeReceived = time.Now().UnixMilli()
+		event.Number = counter
+		counter++
+		//time.Sleep(5 * time.Second) // commented to log time properly
 		// sending msg data to channel
 		log.Println("[INFO] received msg about artist : ", event.Artist)
 		ueChan <- event

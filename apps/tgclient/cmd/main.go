@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 	"tgclient/pkg/kafka"
+	"tgclient/pkg/prometheus"
 	"tgclient/pkg/storage"
 	"tgclient/pkg/telegram"
 )
@@ -22,6 +23,9 @@ func InitTelegram() {
 
 func main() {
 	InitTelegram()
+
+	promClient := prometheus.NewClientPrometheus()
+
 	logger := logrus.Logger{Formatter: &logrus.JSONFormatter{}} // creating and initializing the logger
 	logger.SetOutput(os.Stdout)
 
@@ -35,12 +39,14 @@ func main() {
 	bot.Debug = true
 
 	var wg sync.WaitGroup
-	wg.Add(3)
+	//wg.Add(3)
+	wg.Add(4)
 	chanEvent := make(chan kafka.Event)
 
-	tgBot := telegram.NewBot(bot, &logger, pStorage, chanEvent) // creating custom bot client
+	tgBot := telegram.NewBot(bot, &logger, pStorage, chanEvent, promClient) // creating custom bot client
 	clKafka := kafka.NewKafka()
 
+	go promClient.StartHandling()
 	go clKafka.ConsumeEvents(context.Background(), chanEvent, &wg)
 	go tgBot.StartHandlingEventUpdates(&wg)
 	go func(group *sync.WaitGroup) {
@@ -52,15 +58,3 @@ func main() {
 	}(&wg)
 	wg.Wait()
 }
-
-// when update time?!
-
-// parallel needed here :
-// tgclinet consuming tgupdates
-// tgclient consuming kafka updates
-
-// getting info from kafka
-// select users that are connected with this artist
-// meanwhile a wait channel is working. It is waiting for getting info about artist
-// if matching user found, sending userId and event info to the waiting channel
-// the channel sends info to the user himself

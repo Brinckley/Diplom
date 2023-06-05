@@ -99,6 +99,7 @@ func (c *ESClient) AddDocument(docs []kassir_structs.EventInfo) {
 			Body:    bytes.NewReader(docJson),
 			Refresh: "true",
 		}
+
 		// Perform the request with the client.
 		resReq, err := req.Do(context.Background(), c.client)
 		if err != nil {

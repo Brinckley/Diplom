@@ -11,6 +11,8 @@ const msgHelpCommand = "🧙‍Список команд.... \n" + msgListComman
 const msgUserExistsCommand = "😾😾😾Пользователя с таким именем не существует!😾😾😾" //"😾😾😾User with such name already exists!😾😾😾"
 const msgAddArtist = ""
 
+const msgSearchArtist = "Введите имя артиста 👨‍🎤 для поиска: "
+
 const msgNoArtists = "🚨🚨🚨Артист не найден!!!🚨🚨🚨"         //"🚨🚨🚨No artists in the found!!!🚨🚨🚨"
 const msgNoFavorites = "😱😱😱Нет артистов в избранном!😱😱😱" //"😱😱😱You have no favorite artists!😱😱😱"
 const msgListCommand =

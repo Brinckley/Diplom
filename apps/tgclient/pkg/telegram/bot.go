@@ -5,6 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"sync"
 	"tgclient/pkg/kafka"
+	prometheus "tgclient/pkg/prometheus"
 	"tgclient/pkg/storage"
 )
 
@@ -14,18 +15,20 @@ type Bot struct {
 	storage      *storage.TgPostgres
 	receiverChan chan kafka.Event
 
-	updates tgbotapi.UpdatesChannel
+	prometheusClient *prometheus.ClientPrometheus
+	updates          tgbotapi.UpdatesChannel
 
 	menuKeyboard    tgbotapi.InlineKeyboardMarkup
 	artistsKeyboard tgbotapi.InlineKeyboardMarkup
 }
 
-func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc chan kafka.Event) *Bot {
+func NewBot(bot *tgbotapi.BotAPI, logger *logrus.Logger, storage *storage.TgPostgres, rc chan kafka.Event, pc *prometheus.ClientPrometheus) *Bot {
 	b := &Bot{
-		bot:          bot,
-		logger:       logger,
-		storage:      storage,
-		receiverChan: rc,
+		bot:              bot,
+		logger:           logger,
+		storage:          storage,
+		prometheusClient: pc,
+		receiverChan:     rc,
 	}
 	err := b.initUpdatesChannel()
 	if err != nil {

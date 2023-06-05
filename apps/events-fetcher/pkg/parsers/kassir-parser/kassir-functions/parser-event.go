@@ -43,7 +43,6 @@ func LookAtSearchHtml(artistNameRaw, genre string) ([]kstructs.EventInfo, error)
 	var events []kstructs.EventInfo
 
 	for _, p := range commonPath {
-		//log.Println("----------------------------------------------111 !1111-----------", p.HTML())
 		innerPath := p.
 			Find("div", "class", "tile-card")
 		datePath := innerPath.Find("time", "class", "date")

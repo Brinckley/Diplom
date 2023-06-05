@@ -3,7 +3,9 @@ env/
 data
 .database/
 data_elasticsearch/
+consul.d/
 data_postgres/
+TMP_SQL/
 apps/producer/internal/parsers/parser-lastfm/LastFm-URL-Files/API
 apps/producer/internal/parsers/parser-discogs/Discogs-URL-Files/API
 .provisioning/

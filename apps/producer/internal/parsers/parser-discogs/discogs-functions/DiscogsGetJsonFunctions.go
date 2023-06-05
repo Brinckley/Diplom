@@ -32,7 +32,7 @@ func getByteArrayByURL(fullUrl string) []byte {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() { _ = resp.Body.Close() } ()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusOK {
 		bodyBytes, err := io.ReadAll(resp.Body)
